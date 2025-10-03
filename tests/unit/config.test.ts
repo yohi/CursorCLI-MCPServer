@@ -148,6 +148,142 @@ describe('ConfigurationManager', () => {
 
       expect(result.ok).toBe(false);
     });
+
+    describe('数値境界値テスト', () => {
+      describe('requestTimeoutMs', () => {
+        it('最小値未満(999)の場合、バリデーションエラーを返す', () => {
+          const manager = new ConfigurationManager();
+          const invalidConfig = {
+            ...DEFAULT_CONFIG,
+            server: {
+              ...DEFAULT_CONFIG.server,
+              requestTimeoutMs: 999, // 最小値1000未満
+            },
+          };
+
+          const result = manager.validateConfig(invalidConfig);
+
+          expect(result.ok).toBe(false);
+        });
+
+        it('最大値超過(60001)の場合、バリデーションエラーを返す', () => {
+          const manager = new ConfigurationManager();
+          const invalidConfig = {
+            ...DEFAULT_CONFIG,
+            server: {
+              ...DEFAULT_CONFIG.server,
+              requestTimeoutMs: 60001, // 最大値60000超過
+            },
+          };
+
+          const result = manager.validateConfig(invalidConfig);
+
+          expect(result.ok).toBe(false);
+        });
+      });
+
+      describe('maxFileSize', () => {
+        it('最小値未満(1023)の場合、バリデーションエラーを返す', () => {
+          const manager = new ConfigurationManager();
+          const invalidConfig = {
+            ...DEFAULT_CONFIG,
+            tools: {
+              ...DEFAULT_CONFIG.tools,
+              fileOperations: {
+                ...DEFAULT_CONFIG.tools.fileOperations,
+                maxFileSize: 1023, // 最小値1024未満
+              },
+            },
+          };
+
+          const result = manager.validateConfig(invalidConfig);
+
+          expect(result.ok).toBe(false);
+        });
+
+        it('最大値超過(100 * 1024 * 1024 + 1)の場合、バリデーションエラーを返す', () => {
+          const manager = new ConfigurationManager();
+          const invalidConfig = {
+            ...DEFAULT_CONFIG,
+            tools: {
+              ...DEFAULT_CONFIG.tools,
+              fileOperations: {
+                ...DEFAULT_CONFIG.tools.fileOperations,
+                maxFileSize: (100 * 1024 * 1024) + 1, // 最大値100MB超過
+              },
+            },
+          };
+
+          const result = manager.validateConfig(invalidConfig);
+
+          expect(result.ok).toBe(false);
+        });
+      });
+
+      describe('maxLogSize', () => {
+        it('最小値未満(1024 * 1024 - 1)の場合、バリデーションエラーを返す', () => {
+          const manager = new ConfigurationManager();
+          const invalidConfig = {
+            ...DEFAULT_CONFIG,
+            logging: {
+              ...DEFAULT_CONFIG.logging,
+              maxLogSize: (1024 * 1024) - 1, // 最小値1MB未満
+            },
+          };
+
+          const result = manager.validateConfig(invalidConfig);
+
+          expect(result.ok).toBe(false);
+        });
+
+        it('最大値超過(100 * 1024 * 1024 + 1)の場合、バリデーションエラーを返す', () => {
+          const manager = new ConfigurationManager();
+          const invalidConfig = {
+            ...DEFAULT_CONFIG,
+            logging: {
+              ...DEFAULT_CONFIG.logging,
+              maxLogSize: (100 * 1024 * 1024) + 1, // 最大値100MB超過
+            },
+          };
+
+          const result = manager.validateConfig(invalidConfig);
+
+          expect(result.ok).toBe(false);
+        });
+      });
+
+      describe('rotationCount', () => {
+        it('最小値未満(0)の場合、バリデーションエラーを返す', () => {
+          const manager = new ConfigurationManager();
+          const invalidConfig = {
+            ...DEFAULT_CONFIG,
+            logging: {
+              ...DEFAULT_CONFIG.logging,
+              rotationCount: 0, // 最小値1未満
+            },
+          };
+
+          const result = manager.validateConfig(invalidConfig);
+
+          expect(result.ok).toBe(false);
+        });
+
+        it('最大値超過(31)の場合、バリデーションエラーを返す', () => {
+          const manager = new ConfigurationManager();
+          const invalidConfig = {
+            ...DEFAULT_CONFIG,
+            logging: {
+              ...DEFAULT_CONFIG.logging,
+              rotationCount: 31, // 最大値30超過
+            },
+          };
+
+          const result = manager.validateConfig(invalidConfig);
+
+          expect(result.ok).toBe(false);
+        });
+      });
+    });
   });
 
   describe('デフォルト設定生成', () => {
