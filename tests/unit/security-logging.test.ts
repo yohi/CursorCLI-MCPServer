@@ -32,19 +32,22 @@ describe('SecurityValidator - Logging Integration', () => {
       const logEntries: any[] = [];
       const originalWrite = winstonLogger.transports[0].write;
 
-      winstonLogger.transports[0].write = function (info: any) {
-        logEntries.push(info);
-        return true;
-      };
+      try {
+        // モンキーパッチを適用
+        winstonLogger.transports[0].write = function (info: any) {
+          logEntries.push(info);
+          return true;
+        };
 
-      // パストラバーサルを試行
-      const result = validator.validatePath('../etc/passwd');
+        // パストラバーサルを試行
+        const result = validator.validatePath('../etc/passwd');
 
-      // ログ記録を確認（後で統合時に実装予定）
-      expect(result.ok).toBe(false);
-
-      // モックを元に戻す
-      winstonLogger.transports[0].write = originalWrite;
+        // ログ記録を確認（後で統合時に実装予定）
+        expect(result.ok).toBe(false);
+      } finally {
+        // アサーションの成否に関わらず、必ず元に戻す
+        winstonLogger.transports[0].write = originalWrite;
+      }
     });
 
     it('プロジェクトルート外アクセス時にログを記録する', () => {
