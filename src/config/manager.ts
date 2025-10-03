@@ -36,6 +36,8 @@ export class ConfigurationManager {
   private configDir: string;
   private watcher: chokidar.FSWatcher | null = null;
   private changeCallbacks: ConfigChangeCallback[] = [];
+  private loadingPromise: Promise<ServerConfig> | null = null;
+  private reloadTimeout: NodeJS.Timeout | null = null;
 
   constructor(options: ConfigManagerOptions = {}) {
     this.configDir = options.configDir || DEFAULT_CONFIG_DIR;
@@ -46,34 +48,54 @@ export class ConfigurationManager {
    * 設定ファイルを読み込み、バリデーションを実行
    */
   async loadConfig(): Promise<ServerConfig> {
-    try {
-      // 設定ファイルの存在確認
-      await fs.access(this.configPath);
-
-      // ファイルの読み込み
-      const fileContent = await fs.readFile(this.configPath, 'utf-8');
-      const parsedConfig = JSON.parse(fileContent);
-
-      // バリデーション
-      const validationResult = this.validateConfig(parsedConfig);
-
-      if (!validationResult.ok) {
-        throw new Error(`Configuration validation failed: ${validationResult.error.message}`);
-      }
-
-      // 環境変数からのマージ
-      this.config = this.mergeEnvironmentVariables(validationResult.value);
-
-      return this.config;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        // 設定ファイルが存在しない場合、デフォルト設定を生成
-        await this.generateDefaultConfig();
-        this.config = { ...DEFAULT_CONFIG };
-        return this.config;
-      }
-      throw error;
+    // Single-flight guard: return existing promise if load is already in progress
+    if (this.loadingPromise) {
+      return this.loadingPromise;
     }
+
+    // Create new loading promise
+    this.loadingPromise = (async () => {
+      try {
+        // Load config into local variable to avoid partial updates
+        let loadedConfig: ServerConfig;
+
+        try {
+          // 設定ファイルの存在確認
+          await fs.access(this.configPath);
+
+          // ファイルの読み込み
+          const fileContent = await fs.readFile(this.configPath, 'utf-8');
+          const parsedConfig = JSON.parse(fileContent);
+
+          // バリデーション
+          const validationResult = this.validateConfig(parsedConfig);
+
+          if (!validationResult.ok) {
+            throw new Error(`Configuration validation failed: ${validationResult.error.message}`);
+          }
+
+          // 環境変数からのマージ
+          loadedConfig = this.mergeEnvironmentVariables(validationResult.value);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+            // 設定ファイルが存在しない場合、デフォルト設定を生成
+            await this.generateDefaultConfig();
+            loadedConfig = { ...DEFAULT_CONFIG };
+          } else {
+            throw error;
+          }
+        }
+
+        // Assign to this.config only once from local result
+        this.config = loadedConfig;
+        return loadedConfig;
+      } finally {
+        // Clear loadingPromise in finally block so subsequent calls start fresh
+        this.loadingPromise = null;
+      }
+    })();
+
+    return this.loadingPromise;
   }
 
   /**
@@ -203,19 +225,34 @@ export class ConfigurationManager {
       },
     });
 
-    this.watcher.on('change', async () => {
-      try {
-        // 設定を再読み込み
-        const newConfig = await this.loadConfig();
-
-        // すべてのコールバックを実行
-        this.changeCallbacks.forEach(cb => cb(newConfig));
-      } catch (error) {
-        // エラーが発生した場合はデフォルト設定にフォールバック
-        const fallbackConfig = { ...DEFAULT_CONFIG };
-        this.config = fallbackConfig;
-        this.changeCallbacks.forEach(cb => cb(fallbackConfig));
+    this.watcher.on('change', () => {
+      // Debounce: clear any existing timeout to merge rapid consecutive events
+      if (this.reloadTimeout) {
+        clearTimeout(this.reloadTimeout);
+        this.reloadTimeout = null;
       }
+
+      // Set new timeout to reload config after 200ms of inactivity
+      this.reloadTimeout = setTimeout(async () => {
+        try {
+          // 設定を再読み込み
+          const newConfig = await this.loadConfig();
+
+          // Update this.config (already done in loadConfig, but for clarity)
+          this.config = newConfig;
+
+          // すべてのコールバックを実行
+          this.changeCallbacks.forEach(cb => cb(newConfig));
+        } catch (error) {
+          // エラーが発生した場合はデフォルト設定にフォールバック
+          const fallbackConfig = { ...DEFAULT_CONFIG };
+          this.config = fallbackConfig;
+          this.changeCallbacks.forEach(cb => cb(fallbackConfig));
+        } finally {
+          // Clear timeout reference
+          this.reloadTimeout = null;
+        }
+      }, 200);
     });
   }
 
@@ -223,6 +260,12 @@ export class ConfigurationManager {
    * 設定ファイルの監視を停止
    */
   async stopWatching(): Promise<void> {
+    // Clear any pending reload timeout
+    if (this.reloadTimeout) {
+      clearTimeout(this.reloadTimeout);
+      this.reloadTimeout = null;
+    }
+
     if (this.watcher) {
       await this.watcher.close();
       this.watcher = null;
