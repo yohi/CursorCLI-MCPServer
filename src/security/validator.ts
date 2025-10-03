@@ -55,28 +55,36 @@ export class SecurityValidator {
    * パスを正規化
    */
   sanitizePath(inputPath: string): string {
-    // 相対パスを絶対パスに変換
-    const absolutePath = path.isAbsolute(inputPath)
-      ? inputPath
-      : path.join(this.projectRoot, inputPath);
+    // path.resolveで相対パスを絶対パスに変換
+    // 絶対パスの場合はpath.resolveが第2引数を優先するため、そのまま使用
+    const absolutePath = path.resolve(this.projectRoot, inputPath);
 
-    // パスを正規化（../ などを解決）
-    const normalized = path.normalize(absolutePath);
-
-    // 余分なスラッシュを削除
-    return normalized.replace(/\/+/g, '/');
+    // OS ネイティブのセパレータと正規化を使用
+    return path.normalize(absolutePath);
   }
 
   /**
    * パストラバーサルを検出
+   *
+   * PATH_TRAVERSALとして扱うのは以下の条件を満たす場合のみ：
+   * - 入力が相対パス（絶対パスではない）
+   * - 正規化後にプロジェクトルート外に解決される
+   *
+   * 絶対パスは後続のOUTSIDE_PROJECT_ROOTチェックで処理される
    */
   private detectPathTraversal(inputPath: string): boolean {
-    // 正規化前のパスに ../ が含まれているかチェック
-    if (inputPath.includes('..')) {
-      return true;
+    // 絶対パスはパストラバーサルとして扱わない
+    // （後続のOUTSIDE_PROJECT_ROOTチェックで処理）
+    if (path.isAbsolute(inputPath)) {
+      return false;
     }
 
-    // 正規化後のパスがプロジェクトルート外になっていないかチェック
+    // enforceProjectRootが無効の場合、パストラバーサルチェックをスキップ
+    if (!this.enforceProjectRoot) {
+      return false;
+    }
+
+    // 相対パスを正規化して、プロジェクトルート外に解決されるかチェック
     const sanitized = this.sanitizePath(inputPath);
     return !this.isWithinProjectRoot(sanitized);
   }
