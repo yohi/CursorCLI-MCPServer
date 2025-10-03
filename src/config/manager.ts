@@ -80,7 +80,13 @@ export class ConfigurationManager {
           if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
             // 設定ファイルが存在しない場合、デフォルト設定を生成
             await this.generateDefaultConfig();
-            loadedConfig = { ...DEFAULT_CONFIG };
+
+            // 環境変数からのマージをデフォルト設定に適用
+            loadedConfig = this.mergeEnvironmentVariables({ ...DEFAULT_CONFIG });
+
+            // マージされた設定をディスクに永続化
+            const mergedContent = JSON.stringify(loadedConfig, null, 2);
+            await fs.writeFile(this.configPath, mergedContent, 'utf-8');
           } else {
             throw error;
           }
