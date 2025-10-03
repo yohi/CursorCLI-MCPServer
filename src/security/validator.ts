@@ -156,8 +156,9 @@ export class SecurityValidator {
     let relativePath = path.relative(this.projectRoot, sanitized);
 
     // minimatchはPOSIX形式のパス（/区切り）を期待するため、
-    // Windowsのバックスラッシュをスラッシュに変換
-    relativePath = relativePath.split(path.sep).join('/');
+    // すべてのバックスラッシュをスラッシュに変換
+    // これによりWindows形式のパス（\区切り）もPOSIX形式に正規化される
+    relativePath = relativePath.replace(/\\/g, '/');
 
     // プリコンパイルされたパターンを使用してマッチング
     return this.compiledPatterns.some((matcher) => {
