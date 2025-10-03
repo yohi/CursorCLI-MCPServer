@@ -30,8 +30,8 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - ログローテーション機能の基本設定
   - _Requirements: 7.1, 7.2, 7.4_
 
-- [ ] 2. 設定管理システムの実装
-- [ ] 2.1 設定ファイル読み込みと検証機能
+- [x] 2. 設定管理システムの実装
+- [x] 2.1 設定ファイル読み込みと検証機能
   - 設定ファイルのスキーマ定義（Zodスキーマ）
   - JSONファイル読み込み機能（.cursorcli-mcp/config.json）
   - 設定バリデーション機能の実装
@@ -39,7 +39,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - 環境変数からの設定上書き機能
   - _Requirements: 6.1, 6.2_
 
-- [ ] 2.2 設定変更監視と動的リロード
+- [x] 2.2 設定変更監視と動的リロード
   - chokidarを使用したファイル監視機能
   - 設定変更時の自動リロード処理
   - 設定変更通知機構の実装
