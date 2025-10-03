@@ -46,7 +46,7 @@ describe('ConfigurationManager - Watch Mode', () => {
   describe('設定変更監視', () => {
     it('設定ファイルの変更を検知できる', async () => {
       let callbackExecuted = false;
-      let newConfig: ServerConfig | null = null;
+      let newConfig: ServerConfig | undefined;
 
       // 監視開始
       manager.watchConfig((config) => {
@@ -129,7 +129,7 @@ describe('ConfigurationManager - Watch Mode', () => {
     });
 
     it('不正な設定値の場合、デフォルト設定にフォールバックする', async () => {
-      let fallbackConfig: ServerConfig | null = null;
+      let fallbackConfig: ServerConfig | undefined;
 
       // 監視開始
       manager.watchConfig((config) => {
@@ -185,6 +185,54 @@ describe('ConfigurationManager - Watch Mode', () => {
 
       // コールバックが実行されないことを確認
       expect(callbackExecuted).toBe(false);
+    });
+
+    it('stopWatching後に再度watchConfigした場合、以前のコールバックは実行されない', async () => {
+      let callbackAExecuted = false;
+      let callbackBExecuted = false;
+
+      // コールバックAを登録して監視開始
+      manager.watchConfig(() => {
+        callbackAExecuted = true;
+      });
+
+      // 監視を停止（コールバックもクリアされる）
+      await manager.stopWatching();
+
+      // コールバックBを登録して監視を再開
+      manager.watchConfig(() => {
+        callbackBExecuted = true;
+      });
+
+      // 設定ファイルを変更
+      const modifiedConfig = {
+        ...DEFAULT_CONFIG,
+        logging: {
+          ...DEFAULT_CONFIG.logging,
+          level: 'warn' as const,
+        },
+      };
+
+      await fs.writeFile(testConfigPath, JSON.stringify(modifiedConfig, null, 2), 'utf-8');
+
+      // 変更が検知されるまで待機（最大2秒）
+      await new Promise<void>((resolve) => {
+        const checkInterval = setInterval(() => {
+          if (callbackBExecuted) {
+            clearInterval(checkInterval);
+            resolve();
+          }
+        }, 100);
+
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          resolve();
+        }, 2000);
+      });
+
+      // コールバックBのみが実行され、コールバックAは実行されないことを確認
+      expect(callbackBExecuted).toBe(true);
+      expect(callbackAExecuted).toBe(false);
     });
   });
 });

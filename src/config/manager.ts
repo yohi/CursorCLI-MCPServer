@@ -91,7 +91,7 @@ export class ConfigurationManager {
           error: {
             field: firstIssue.path.join('.'),
             message: firstIssue.message,
-            received: firstIssue.received,
+            received: 'received' in firstIssue ? firstIssue.received : undefined,
           },
         };
       }
