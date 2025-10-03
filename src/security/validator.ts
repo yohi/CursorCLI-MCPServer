@@ -7,7 +7,8 @@
  * - ブロックパターンによるファイル除外
  */
 
-import path from 'path';
+import * as path from 'node:path';
+import * as fs from 'node:fs';
 import { minimatch } from 'minimatch';
 import type { Result } from '../types/index.js';
 
@@ -46,7 +47,18 @@ export class SecurityValidator {
   private enforceProjectRoot: boolean;
 
   constructor(options: SecurityValidatorOptions = {}) {
-    this.projectRoot = options.projectRoot || process.cwd();
+    // ルートを絶対・正規化し、可能なら物理パスに解決
+    // シンボリックリンク経由のディレクトリトラバーサルを防ぐ
+    const configuredRoot = options.projectRoot ?? process.cwd();
+    const absoluteRoot = path.resolve(configuredRoot);
+    this.projectRoot = (() => {
+      try {
+        return fs.realpathSync.native(absoluteRoot);
+      } catch {
+        // realpathが失敗した場合（パスが存在しない等）は絶対パスを使用
+        return absoluteRoot;
+      }
+    })();
     this.blockedPatterns = options.blockedPatterns || DEFAULT_BLOCKED_PATTERNS;
     this.enforceProjectRoot = options.enforceProjectRoot !== false;
   }
@@ -91,10 +103,29 @@ export class SecurityValidator {
 
   /**
    * プロジェクトルート内かどうかを判定
+   *
+   * シンボリックリンク経由のディレクトリトラバーサルを防ぐため、
+   * 物理パス（realpath）で比較を行う
    */
   isWithinProjectRoot(inputPath: string): boolean {
     const sanitized = this.sanitizePath(inputPath);
-    const relativePath = path.relative(this.projectRoot, sanitized);
+
+    // 物理パスへ解決（対象が未作成の場合は親ディレクトリを解決）
+    let target = sanitized;
+    try {
+      target = fs.realpathSync.native(sanitized);
+    } catch {
+      // パスが存在しない場合、親ディレクトリの物理パスに basename を結合
+      try {
+        const dirReal = fs.realpathSync.native(path.dirname(sanitized));
+        target = path.join(dirReal, path.basename(sanitized));
+      } catch {
+        // 親ディレクトリも解決できない場合は sanitized のまま比較
+        // （新規作成予定のディレクトリ等）
+      }
+    }
+
+    const relativePath = path.relative(this.projectRoot, target);
 
     // 相対パスが ../ で始まる場合、プロジェクトルート外
     // 空文字列の場合はプロジェクトルート自体なので許可
