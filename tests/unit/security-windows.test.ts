@@ -6,7 +6,6 @@
  */
 
 import { describe, it, expect } from '@jest/globals';
-import * as path from 'node:path';
 import { SecurityValidator } from '../../src/security/validator.js';
 
 describe('SecurityValidator - Windows パス対応', () => {
@@ -26,9 +25,9 @@ describe('SecurityValidator - Windows パス対応', () => {
         expect(result1.error.code).toBe('BLOCKED_PATTERN');
       }
 
-      // Windows形式のパス（バックスラッシュ）をシミュレート
-      // path.sepが\の環境では自動的にバックスラッシュが使われる
-      const windowsStylePath = ['node_modules', 'package', 'index.js'].join(path.sep);
+      // Windows形式のパス（バックスラッシュ）を明示的に指定
+      // 全プラットフォームでバックスラッシュ変換をテストする
+      const windowsStylePath = 'node_modules\\package\\index.js';
       const result2 = validator.validatePath(windowsStylePath);
       expect(result2.ok).toBe(false);
       if (!result2.ok) {
@@ -47,8 +46,8 @@ describe('SecurityValidator - Windows パス対応', () => {
       const result1 = validator.validatePath('.git/config');
       expect(result1.ok).toBe(false);
 
-      // Windows形式シミュレート
-      const windowsPath = ['.git', 'config'].join(path.sep);
+      // Windows形式（バックスラッシュ）を明示的に指定
+      const windowsPath = '.git\\config';
       const result2 = validator.validatePath(windowsPath);
       expect(result2.ok).toBe(false);
     });
@@ -60,8 +59,8 @@ describe('SecurityValidator - Windows パス対応', () => {
         blockedPatterns: ['**/test/**/*.test.ts'],
       });
 
-      // 深くネストされたテストファイル
-      const testPath = ['src', 'components', 'test', 'unit', 'Button.test.ts'].join(path.sep);
+      // 深くネストされたテストファイル（Windows形式バックスラッシュ）
+      const testPath = 'src\\components\\test\\unit\\Button.test.ts';
       const result = validator.validatePath(testPath);
       expect(result.ok).toBe(false);
     });
