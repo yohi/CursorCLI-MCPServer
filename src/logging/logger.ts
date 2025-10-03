@@ -155,10 +155,13 @@ export class LoggingSystem {
    * ロガーのシャットダウン
    */
   async shutdown(): Promise<void> {
-    return new Promise((resolve) => {
-      this.logger.close(() => {
+    return new Promise((resolve, reject) => {
+      try {
+        this.logger.close();
         resolve();
-      });
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 }
