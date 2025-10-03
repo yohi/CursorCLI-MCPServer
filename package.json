@@ -34,7 +34,8 @@
     "zod": "^3.22.4",
     "winston": "^3.11.0",
     "winston-daily-rotate-file": "^4.7.1",
-    "chokidar": "^3.5.3"
+    "chokidar": "^3.5.3",
+    "minimatch": "^9.0.3"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
