@@ -9,7 +9,7 @@
 
 import * as path from 'node:path';
 import * as fs from 'node:fs';
-import { minimatch } from 'minimatch';
+import { Minimatch } from 'minimatch';
 import type { Result } from '../types/index.js';
 
 /**
@@ -44,6 +44,7 @@ const DEFAULT_BLOCKED_PATTERNS = [
 export class SecurityValidator {
   private projectRoot: string;
   private blockedPatterns: string[];
+  private compiledPatterns: Minimatch[];
   private enforceProjectRoot: boolean;
 
   constructor(options: SecurityValidatorOptions = {}) {
@@ -61,6 +62,18 @@ export class SecurityValidator {
     })();
     this.blockedPatterns = options.blockedPatterns || DEFAULT_BLOCKED_PATTERNS;
     this.enforceProjectRoot = options.enforceProjectRoot !== false;
+
+    // パターンをプリコンパイル（パフォーマンス最適化）
+    // Windows環境ではケースインセンシティブなマッチングを行う
+    const isWindows = process.platform === 'win32';
+    this.compiledPatterns = this.blockedPatterns.map((pattern) => {
+      return new Minimatch(pattern, {
+        dot: true,           // .で始まるファイルもマッチ
+        nonegate: true,      // !による否定を無効化（セキュリティ上の理由）
+        nocomment: true,     // #によるコメントを無効化（セキュリティ上の理由）
+        nocase: isWindows,   // Windows環境ではケースインセンシティブ
+      });
+    });
   }
 
   /**
@@ -134,13 +147,21 @@ export class SecurityValidator {
 
   /**
    * ブロックパターンに一致するかチェック
+   *
+   * Windows環境でのバックスラッシュ問題に対応するため、
+   * パスをPOSIX形式（/区切り）に変換してからマッチング
    */
   private matchesBlockedPattern(inputPath: string): boolean {
     const sanitized = this.sanitizePath(inputPath);
-    const relativePath = path.relative(this.projectRoot, sanitized);
+    let relativePath = path.relative(this.projectRoot, sanitized);
 
-    return this.blockedPatterns.some((pattern) => {
-      return minimatch(relativePath, pattern, { dot: true });
+    // minimatchはPOSIX形式のパス（/区切り）を期待するため、
+    // Windowsのバックスラッシュをスラッシュに変換
+    relativePath = relativePath.split(path.sep).join('/');
+
+    // プリコンパイルされたパターンを使用してマッチング
+    return this.compiledPatterns.some((matcher) => {
+      return matcher.match(relativePath);
     });
   }
 
