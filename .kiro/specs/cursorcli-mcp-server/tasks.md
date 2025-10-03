@@ -63,7 +63,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - _Requirements: 2.4, 5.1_
 
 - [ ] 4. MCPプロトコルハンドラーの実装
-- [ ] 4.1 MCP SDKの統合とサーバー初期化
+- [x] 4.1 MCP SDKの統合とサーバー初期化
   - `@modelcontextprotocol/sdk`のServer クラス統合
   - サーバー情報の定義（名前、バージョン、capabilities）
   - 初期化ハンドシェイクの実装
