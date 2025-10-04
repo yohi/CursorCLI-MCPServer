@@ -122,3 +122,19 @@ export interface ErrorResponse {
     data?: unknown;
   };
 }
+
+/**
+ * JSON-RPCメッセージ
+ */
+export interface JSONRPCMessage {
+  jsonrpc: '2.0';
+  id?: string | number | null;
+  method?: string;
+  params?: Record<string, unknown> | unknown[];
+  result?: unknown;
+  error?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  };
+}

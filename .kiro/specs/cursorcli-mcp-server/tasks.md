@@ -62,7 +62,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - セキュリティ統計の収集機能
   - _Requirements: 2.4, 5.1_
 
-- [ ] 4. MCPプロトコルハンドラーの実装
+- [x] 4. MCPプロトコルハンドラーの実装
 - [x] 4.1 MCP SDKの統合とサーバー初期化
   - `@modelcontextprotocol/sdk`のServer クラス統合
   - サーバー情報の定義（名前、バージョン、capabilities）
@@ -71,7 +71,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - クライアント情報の記録と検証
   - _Requirements: 1.1, 1.2, 1.3_
 
-- [ ] 4.2 stdio トランスポートの設定
+- [x] 4.2 stdio トランスポートの設定
   - StdioServerTransport の初期化
   - 標準入出力ストリームの設定
   - JSON-RPCメッセージのフレーミング処理
@@ -79,7 +79,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - トランスポートライフサイクル管理
   - _Requirements: 1.5, 9.2_
 
-- [ ] 4.3 ツールレジストリの実装
+- [x] 4.3 ツールレジストリの実装
   - ツール登録機能の実装
   - ツール検索とルックアップ機能
   - ツール一覧取得機能（listTools）
@@ -87,7 +87,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - ツールメタデータ管理
   - _Requirements: 1.4_
 
-- [ ] 4.4 ツール実行エンジンの実装
+- [x] 4.4 ツール実行エンジンの実装
   - ツール呼び出しハンドラー（callTool）
   - パラメータバリデーション処理（Zodスキーマ使用）
   - タイムアウト制御機能（Promise.raceパターン）
