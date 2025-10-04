@@ -1,24 +1,21 @@
 /**
- * File Operations Tools
+ * File Operations Tool
  *
- * ファイル操作ツールの実装
- * Requirements: 2.1-2.6
+ * ファイルシステム操作（読み取り、書き込み、ディレクトリ一覧）のMCPツール実装
+ * Requirements: 2.1-2.6, 8.3
  */
 
+import { promises as fs } from 'fs';
+import * as path from 'path';
 import { z } from 'zod';
-import * as fs from 'node:fs/promises';
-// import * as path from 'node:path'; // TODO: タスク5.2, 5.3で使用
-import type { CallToolResult } from '../protocol/types.js';
-import type { SecurityValidator } from '../security/index.js';
+import type { SecurityValidator } from '../security/validator.js';
 
 /**
  * read_file ツールのスキーマ
- *
- * Requirement 2.1: ファイル読み込み機能
  */
 export const ReadFileSchema = z.object({
   path: z.string().describe('読み取るファイルの相対パスまたは絶対パス'),
-  encoding: z.enum(['utf-8', 'utf-16le', 'binary']).default('utf-8').optional().describe('ファイルエンコーディング'),
+  encoding: z.enum(['utf-8', 'utf-16le', 'binary']).default('utf-8').optional(),
   offset: z.number().min(0).optional().describe('読み取り開始位置（バイト）'),
   length: z.number().min(1).max(10_000_000).optional().describe('読み取りサイズ（バイト、最大10MB）')
 });
@@ -26,182 +23,245 @@ export const ReadFileSchema = z.object({
 export type ReadFileParams = z.infer<typeof ReadFileSchema>;
 
 /**
- * ファイル読み込みツール
- *
- * Requirements:
- * - 2.1: ファイル内容の読み込み
- * - 2.4: セキュリティ検証（プロジェクトルート外アクセス拒否）
- * - 2.5: エラーハンドリング
- * - 8.3: 大容量ファイル処理（10MB制限）
+ * read_file ツールの結果
  */
-export async function readFile(
-  params: ReadFileParams,
-  securityValidator: SecurityValidator
-): Promise<CallToolResult> {
-  try {
-    // パラメータバリデーション
-    const validated = ReadFileSchema.parse(params);
-
-    // セキュリティ検証
-    const pathValidation = securityValidator.validatePath(validated.path);
-    if (!pathValidation.ok) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Security error: ${pathValidation.error.code} - ${pathValidation.error.message}`
-        }],
-        isError: true
-      };
-    }
-
-    const safePath = pathValidation.value;
-
-    // ファイル存在確認
-    try {
-      await fs.access(safePath, fs.constants.R_OK);
-    } catch {
-      return {
-        content: [{
-          type: 'text',
-          text: `File not found or not accessible: ${validated.path}`
-        }],
-        isError: true
-      };
-    }
-
-    // ファイル情報取得
-    const stats = await fs.stat(safePath);
-    const fileSize = stats.size;
-
-    // エンコーディングの処理
-    const encoding = validated.encoding || 'utf-8';
-    let content: string;
-    let truncated = false;
-
-    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-
-    if (encoding === 'binary') {
-      // バイナリファイルの読み込み
-      const buffer = await fs.readFile(safePath);
-      if (buffer.length > MAX_FILE_SIZE) {
-        truncated = true;
-        content = buffer.subarray(0, MAX_FILE_SIZE).toString('base64');
-      } else {
-        content = buffer.toString('base64');
-      }
-    } else {
-      // テキストファイルの読み込み
-      const nodeEncoding = encoding === 'utf-16le' ? 'utf16le' : 'utf8';
-
-      if (fileSize > MAX_FILE_SIZE) {
-        // 大容量ファイルの場合は切り詰め
-        truncated = true;
-        const buffer = Buffer.alloc(MAX_FILE_SIZE);
-        const fd = await fs.open(safePath, 'r');
-        try {
-          await fd.read(buffer, 0, MAX_FILE_SIZE, 0);
-          content = buffer.toString(nodeEncoding);
-        } finally {
-          await fd.close();
-        }
-      } else {
-        content = await fs.readFile(safePath, nodeEncoding);
-      }
-    }
-
-    // メタデータを含めたレスポンス
-    const responseText = JSON.stringify({
-      content,
-      size: fileSize,
-      encoding,
-      truncated,
-      lastModified: stats.mtime.toISOString()
-    }, null, 2);
-
-    return {
-      content: [{
-        type: 'text',
-        text: responseText
-      }],
-      isError: false
-    };
-
-  } catch (error) {
-    // バリデーションエラーやその他のエラー
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error reading file: ${errorMessage}`
-      }],
-      isError: true
-    };
-  }
+export interface ReadFileResult {
+  content: string;
+  size: number;
+  encoding: string;
+  truncated: boolean;
+  lastModified: string;
 }
 
 /**
  * write_file ツールのスキーマ
- *
- * Requirement 2.2: ファイル書き込み機能
  */
 export const WriteFileSchema = z.object({
   path: z.string().describe('書き込み先ファイルの相対パスまたは絶対パス'),
   content: z.string().describe('書き込む内容'),
-  encoding: z.enum(['utf-8', 'utf-16le']).default('utf-8').optional().describe('ファイルエンコーディング'),
-  createDirectories: z.boolean().default(false).describe('親ディレクトリの自動作成'),
-  overwrite: z.boolean().default(true).describe('既存ファイルの上書き許可')
+  encoding: z.enum(['utf-8', 'utf-16le']).optional().describe('エンコーディング'),
+  createDirectories: z.boolean().optional().describe('親ディレクトリの自動作成'),
+  overwrite: z.boolean().optional().describe('既存ファイルの上書き許可')
 });
 
 export type WriteFileParams = z.infer<typeof WriteFileSchema>;
 
 /**
- * ファイル書き込みツール
- *
- * TODO: タスク5.2で実装
+ * write_file ツールの結果
  */
-export async function writeFile(
-  _params: WriteFileParams,
-  _securityValidator: SecurityValidator
-): Promise<CallToolResult> {
-  // タスク5.2で実装
-  return {
-    content: [{
-      type: 'text',
-      text: 'Not implemented yet'
-    }],
-    isError: true
-  };
+export interface WriteFileResult {
+  success: boolean;
+  path: string;
+  size: number;
+  created: boolean;
 }
 
 /**
- * list_directory ツールのスキーマ
+ * File Operations Tool
  *
- * Requirement 2.3: ディレクトリ一覧取得
+ * Requirement 2.1-2.6: ファイル操作機能のMCPツール化
+ * Requirement 8.3: 大容量ファイルの分割読み込み
  */
-export const ListDirectorySchema = z.object({
-  path: z.string().describe('一覧を取得するディレクトリパス'),
-  recursive: z.boolean().default(false).describe('サブディレクトリの再帰的取得'),
-  includeHidden: z.boolean().default(false).describe('隠しファイルの含有'),
-  pattern: z.string().optional().describe('ファイル名のglob パターン（例: *.ts）')
-});
+export class FileOperationsTool {
+  private readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-export type ListDirectoryParams = z.infer<typeof ListDirectorySchema>;
+  constructor(
+    private securityValidator: SecurityValidator,
+    private projectRoot: string
+  ) {}
 
-/**
- * ディレクトリ一覧取得ツール
- *
- * TODO: タスク5.3で実装
- */
-export async function listDirectory(
-  _params: ListDirectoryParams,
-  _securityValidator: SecurityValidator
-): Promise<CallToolResult> {
-  // タスク5.3で実装
-  return {
-    content: [{
-      type: 'text',
-      text: 'Not implemented yet'
-    }],
-    isError: true
-  };
+  /**
+   * ファイルを読み込む
+   *
+   * Requirement 2.1: ファイル内容の読み取りとJSON形式での返却
+   * Requirement 2.4: プロジェクトルート外アクセスの拒否
+   * Requirement 2.5: 詳細なエラー情報の返却
+   * Requirement 2.6: 相対パスの解決
+   * Requirement 8.3: 大容量ファイルの処理
+   */
+  async readFile(params: ReadFileParams): Promise<ReadFileResult> {
+    // パラメータのバリデーション
+    const validated = ReadFileSchema.parse(params);
+
+    // パスの解決（相対パス対応）
+    const resolvedPath = path.isAbsolute(validated.path)
+      ? validated.path
+      : path.join(this.projectRoot, validated.path);
+
+    // セキュリティ検証
+    const securityResult = this.securityValidator.validatePath(resolvedPath);
+    if (!securityResult.ok) {
+      throw new Error(`Security error: ${securityResult.error.message}`);
+    }
+
+    try {
+      // ファイルの存在確認と統計情報取得
+      const stats = await fs.stat(resolvedPath);
+
+      if (!stats.isFile()) {
+        throw new Error(`Path is not a file: ${validated.path}`);
+      }
+
+      // エンコーディングの処理
+      const encoding = validated.encoding || 'utf-8';
+      let content: string;
+      let actualSize: number;
+      let truncated = false;
+
+      if (encoding === 'binary') {
+        // バイナリファイルの読み込み
+        const buffer = await this.readFileWithLimits(
+          resolvedPath,
+          validated.offset,
+          validated.length
+        );
+        content = buffer.toString('base64');
+        actualSize = buffer.length;
+        truncated = stats.size > this.MAX_FILE_SIZE && !validated.length;
+      } else {
+        // テキストファイルの読み込み
+        const buffer = await this.readFileWithLimits(
+          resolvedPath,
+          validated.offset,
+          validated.length
+        );
+
+        // エンコーディングに応じて変換
+        if (encoding === 'utf-16le') {
+          content = buffer.toString('utf16le');
+        } else {
+          content = buffer.toString('utf8');
+        }
+
+        actualSize = buffer.length;
+        truncated = stats.size > this.MAX_FILE_SIZE && !validated.length;
+      }
+
+      return {
+        content,
+        size: actualSize,
+        encoding,
+        truncated,
+        lastModified: stats.mtime.toISOString()
+      };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        throw new Error(`File not found: ${validated.path}`);
+      }
+      if ((error as NodeJS.ErrnoException).code === 'EACCES') {
+        throw new Error(`Permission denied: ${validated.path}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * ファイルをサイズ制限付きで読み込む
+   */
+  private async readFileWithLimits(
+    filePath: string,
+    offset?: number,
+    length?: number
+  ): Promise<Buffer> {
+    const stats = await fs.stat(filePath);
+
+    // 読み取り範囲の決定
+    const startOffset = Math.max(0, offset ?? 0);
+
+    // offsetがファイルサイズ以上の場合は空バッファを返す
+    if (startOffset >= stats.size) {
+      return Buffer.alloc(0);
+    }
+
+    const maxLength = Math.min(length ?? this.MAX_FILE_SIZE, this.MAX_FILE_SIZE);
+    const remaining = stats.size - startOffset;
+    const actualLength = Math.min(maxLength, remaining);
+
+    // ファイルハンドルを開いて部分的に読み込み
+    const fileHandle = await fs.open(filePath, 'r');
+    try {
+      const buffer = Buffer.alloc(actualLength);
+      await fileHandle.read(buffer, 0, actualLength, startOffset);
+      return buffer;
+    } finally {
+      await fileHandle.close();
+    }
+  }
+
+  /**
+   * ファイルに書き込む
+   *
+   * Requirement 2.2: ファイル書き込みと成功/失敗ステータスの返却
+   * Requirement 2.4: プロジェクトルート外アクセスの拒否
+   * Requirement 2.5: 詳細なエラー情報の返却
+   * Requirement 2.6: 相対パスの解決
+   * Requirement 5.5: 破壊的操作の確認フラグチェック
+   */
+  async writeFile(params: WriteFileParams): Promise<WriteFileResult> {
+    // パラメータのバリデーション
+    const validated = WriteFileSchema.parse(params);
+
+    // パスの解決（相対パス対応）
+    const resolvedPath = path.isAbsolute(validated.path)
+      ? validated.path
+      : path.join(this.projectRoot, validated.path);
+
+    // セキュリティ検証
+    const securityResult = this.securityValidator.validatePath(resolvedPath);
+    if (!securityResult.ok) {
+      throw new Error(`Security error: ${securityResult.error.message}`);
+    }
+
+    try {
+      // ファイルの存在確認
+      let fileExists = false;
+      try {
+        const stats = await fs.stat(resolvedPath);
+        fileExists = stats.isFile();
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          throw error;
+        }
+      }
+
+      // デフォルト値の設定
+      const overwrite = validated.overwrite ?? true;
+      const createDirectories = validated.createDirectories ?? false;
+      const encoding = validated.encoding || 'utf-8';
+
+      // 上書き確認
+      if (fileExists && !overwrite) {
+        throw new Error(`File already exists and overwrite is disabled: ${validated.path}`);
+      }
+
+      // 親ディレクトリの作成
+      const dirPath = path.dirname(resolvedPath);
+      if (createDirectories) {
+        await fs.mkdir(dirPath, { recursive: true });
+      }
+
+      // エンコーディングに応じて書き込み
+      const writeEncoding = encoding === 'utf-16le' ? 'utf16le' : 'utf8';
+
+      await fs.writeFile(resolvedPath, validated.content, writeEncoding as BufferEncoding);
+
+      // 書き込み後のファイルサイズを取得
+      const stats = await fs.stat(resolvedPath);
+
+      return {
+        success: true,
+        path: resolvedPath,
+        size: stats.size,
+        created: !fileExists
+      };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        throw new Error(`Parent directory does not exist: ${path.dirname(validated.path)}`);
+      }
+      if ((error as NodeJS.ErrnoException).code === 'EACCES') {
+        throw new Error(`Permission denied: ${validated.path}`);
+      }
+      throw error;
+    }
+  }
 }

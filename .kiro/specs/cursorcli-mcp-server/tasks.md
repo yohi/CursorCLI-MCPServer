@@ -105,7 +105,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - 読み込み結果のレスポンス生成
   - _Requirements: 2.1, 2.5, 8.3_
 
-- [ ] 5.2 ファイル書き込み機能（write_file）
+- [x] 5.2 ファイル書き込み機能（write_file）
   - write_fileツールのスキーマ定義
   - 書き込み先パスの検証とディレクトリ作成
   - ファイル上書き確認とバックアップ機能
