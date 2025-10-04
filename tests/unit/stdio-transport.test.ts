@@ -222,5 +222,32 @@ describe('StdioTransport', () => {
         mockStdin.emit('end');
       });
     });
+
+    it('close()メソッド呼び出し時にクローズハンドラーを通知する', (done) => {
+      transport.start().then(() => {
+        transport.onClose(() => {
+          expect(transport.isConnected()).toBe(false);
+          done();
+        });
+
+        transport.close();
+      });
+    });
+
+    it('close()を複数回呼び出してもクローズハンドラーは1回のみ実行される', async () => {
+      await transport.start();
+
+      let closeCount = 0;
+      transport.onClose(() => {
+        closeCount++;
+      });
+
+      await transport.close();
+      await transport.close();
+      await transport.close();
+
+      // クローズハンドラーは1回のみ実行される（冪等性）
+      expect(closeCount).toBe(1);
+    });
   });
 });

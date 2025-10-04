@@ -112,16 +112,17 @@ export class StdioTransport {
    * 接続をクローズする
    */
   async close(): Promise<void> {
-    if (!this.connected) {
+    // 既にクローズ済みの場合は何もしない
+    if (this.closed) {
       return;
     }
-
-    this.connected = false;
-    this.closed = true;
 
     // リスナーをクリア
     this.stdin.removeAllListeners();
     this.stdout.removeAllListeners();
+
+    // クローズハンドラーを通知（connected/closedフラグはhandleClose()で設定される）
+    this.handleClose();
   }
 
   /**
@@ -198,10 +199,16 @@ export class StdioTransport {
   }
 
   /**
-   * クローズイベントを発火する
+   * クローズイベントを発火する（冪等）
    */
   private handleClose(): void {
+    // 既にクローズ済みの場合は何もしない（冪等性の保証）
+    if (this.closed) {
+      return;
+    }
+
     this.connected = false;
+    this.closed = true;
 
     for (const handler of this.closeHandlers) {
       handler();
