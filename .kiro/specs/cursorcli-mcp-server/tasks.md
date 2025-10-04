@@ -96,7 +96,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - _Requirements: 5.4, 8.1, 8.2_
 
 - [ ] 5. ファイル操作ツールの実装
-- [ ] 5.1 ファイル読み込み機能（read_file）
+- [x] 5.1 ファイル読み込み機能（read_file）
   - read_fileツールのスキーマ定義（Zodスキーマ）
   - ファイル存在確認とアクセス権チェック
   - ファイル内容の読み込み処理
