@@ -72,6 +72,31 @@ describe('ToolExecutor', () => {
         executor.execute('non_existent', {})
       ).rejects.toThrow('Tool not found: non_existent');
     });
+
+    it('無効化されたツールを実行しようとするとエラーをスローする', async () => {
+      // ツールを無効化
+      registry.disable('echo');
+
+      // 実行しようとするとエラー
+      await expect(
+        executor.execute('echo', { value: 'test' })
+      ).rejects.toThrow('Tool disabled: echo');
+    });
+
+    it('無効化されたツールはセマフォを消費しない', async () => {
+      // ツールを無効化
+      registry.disable('echo');
+
+      // 無効化されたツールを実行しようとする（セマフォは消費されない）
+      await expect(
+        executor.execute('echo', { value: 'test' })
+      ).rejects.toThrow('Tool disabled: echo');
+
+      // その後、有効なツールは正常に実行できる（セマフォが消費されていないことを確認）
+      registry.enable('echo');
+      const result = await executor.execute('echo', { value: 'hello' });
+      expect(result.content[0]).toEqual({ type: 'text', text: 'hello' });
+    });
   });
 
   describe('タイムアウト制御', () => {
@@ -142,23 +167,22 @@ describe('ToolExecutor', () => {
       expect((results[2].content[0] as any).text).toBe('result-3');
     });
 
-    it('最大並行数を超えるリクエストは順次実行される', async () => {
-      const startTime = Date.now();
-
-      const promises = [
-        executor.execute('concurrent_tool', { id: 1, delay: 200 }),
-        executor.execute('concurrent_tool', { id: 2, delay: 200 }),
-        executor.execute('concurrent_tool', { id: 3, delay: 200 }),
-        executor.execute('concurrent_tool', { id: 4, delay: 200 })
+    it('最大並行数を超えるリクエストは即座に拒否される', async () => {
+      // 3つの長時間実行タスクを開始（最大並行数=3）
+      const longRunningPromises = [
+        executor.execute('concurrent_tool', { id: 1, delay: 500 }),
+        executor.execute('concurrent_tool', { id: 2, delay: 500 }),
+        executor.execute('concurrent_tool', { id: 3, delay: 500 })
       ];
 
-      const results = await Promise.all(promises);
-      const endTime = Date.now();
-      const duration = endTime - startTime;
+      // 4つ目のリクエストは即座にエラーをスローする（Requirement 8.2）
+      await expect(
+        executor.execute('concurrent_tool', { id: 4, delay: 100 })
+      ).rejects.toThrow(/maximum concurrent executions/i);
 
-      // 4つのタスクを最大3並行で実行すると、約400ms（200ms x 2）かかる
-      expect(duration).toBeGreaterThanOrEqual(350);
-      expect(results).toHaveLength(4);
+      // 既存の3つのタスクは正常に完了する
+      const results = await Promise.all(longRunningPromises);
+      expect(results).toHaveLength(3);
     });
 
     it('各リクエストは独立して処理される', async () => {

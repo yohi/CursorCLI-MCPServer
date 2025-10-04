@@ -18,36 +18,27 @@ export interface ExecutorConfig {
 
 /**
  * セマフォ（並行実行制御）
+ *
+ * Requirement 8.2: 同時接続数が設定された最大値に達した場合、新規接続を拒否
  */
 class Semaphore {
   private permits: number;
-  private queue: (() => void)[] = [];
 
   constructor(permits: number) {
     this.permits = permits;
   }
 
-  async acquire(): Promise<() => void> {
-    if (this.permits > 0) {
-      this.permits--;
-      return () => this.release();
+  acquire(): () => void {
+    if (this.permits <= 0) {
+      throw new Error('Maximum concurrent executions reached');
     }
 
-    return new Promise<() => void>((resolve) => {
-      this.queue.push(() => {
-        this.permits--;
-        resolve(() => this.release());
-      });
-    });
+    this.permits--;
+    return () => this.release();
   }
 
   private release(): void {
     this.permits++;
-
-    const next = this.queue.shift();
-    if (next) {
-      next();
-    }
   }
 }
 
@@ -82,8 +73,13 @@ export class ToolExecutor {
       throw new Error(`Tool not found: ${toolName}`);
     }
 
-    // 並行実行制御
-    const release = await this.semaphore.acquire();
+    // ツールの有効性確認
+    if (!this.registry.isEnabled(toolName)) {
+      throw new Error(`Tool disabled: ${toolName}`);
+    }
+
+    // 並行実行制御（Requirement 8.2: 最大並行数到達時は即座に拒否）
+    const release = this.semaphore.acquire();
 
     try {
       // パラメータのバリデーション
