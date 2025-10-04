@@ -166,13 +166,16 @@ export class FileOperationsTool {
     const stats = await fs.stat(filePath);
 
     // 読み取り範囲の決定
-    const startOffset = offset || 0;
-    const maxLength = length || this.MAX_FILE_SIZE;
-    const actualLength = Math.min(
-      maxLength,
-      stats.size - startOffset,
-      this.MAX_FILE_SIZE
-    );
+    const startOffset = Math.max(0, offset ?? 0);
+
+    // offsetがファイルサイズ以上の場合は空バッファを返す
+    if (startOffset >= stats.size) {
+      return Buffer.alloc(0);
+    }
+
+    const maxLength = Math.min(length ?? this.MAX_FILE_SIZE, this.MAX_FILE_SIZE);
+    const remaining = stats.size - startOffset;
+    const actualLength = Math.min(maxLength, remaining);
 
     // ファイルハンドルを開いて部分的に読み込み
     const fileHandle = await fs.open(filePath, 'r');

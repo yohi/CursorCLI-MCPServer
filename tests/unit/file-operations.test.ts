@@ -169,6 +169,34 @@ describe('FileOperationsTool - read_file', () => {
 
       expect(result.content).toBe('56789ABCDE');
     });
+
+    it('offsetがファイルサイズ以上の場合、空のコンテンツを返す', async () => {
+      const filePath = path.join(testDir, 'offset-test.txt');
+      const content = '0123456789'; // 10 bytes
+      await fs.writeFile(filePath, content, 'utf-8');
+
+      const result = await fileOps.readFile({
+        path: 'offset-test.txt',
+        offset: 100 // ファイルサイズを超えるoffset
+      });
+
+      expect(result.content).toBe('');
+      expect(result.size).toBe(0);
+    });
+
+    it('offsetがファイル末尾の場合、空のコンテンツを返す', async () => {
+      const filePath = path.join(testDir, 'exact-offset.txt');
+      const content = 'test'; // 4 bytes
+      await fs.writeFile(filePath, content, 'utf-8');
+
+      const result = await fileOps.readFile({
+        path: 'exact-offset.txt',
+        offset: 4 // ファイルサイズと同じoffset
+      });
+
+      expect(result.content).toBe('');
+      expect(result.size).toBe(0);
+    });
   });
 
   describe('エラーハンドリング', () => {
