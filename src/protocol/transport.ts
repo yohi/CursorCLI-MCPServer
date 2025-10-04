@@ -48,6 +48,12 @@ export class StdioTransport {
   private errorHandlers: ErrorHandler[] = [];
   private closeHandlers: CloseHandler[] = [];
 
+  // リスナー参照を保存（特定のリスナーのみを削除するため）
+  private dataListener?: (chunk: Buffer) => void;
+  private endListener?: () => void;
+  private stdinErrorListener?: (error: Error) => void;
+  private stdoutErrorListener?: (error: Error) => void;
+
   constructor(config: TransportConfig) {
     this.stdin = config.stdin;
     this.stdout = config.stdout;
@@ -65,24 +71,32 @@ export class StdioTransport {
       return;
     }
 
-    // stdinからのデータ受信設定
-    this.stdin.on('data', (chunk: Buffer) => {
+    // リスナー関数を保存してからアタッチ
+    this.dataListener = (chunk: Buffer) => {
       this.handleData(chunk.toString());
-    });
+    };
+
+    this.endListener = () => {
+      this.handleClose();
+    };
+
+    this.stdinErrorListener = (error: Error) => {
+      this.emitError(error);
+    };
+
+    this.stdoutErrorListener = (error: Error) => {
+      this.emitError(error);
+    };
+
+    // stdinからのデータ受信設定
+    this.stdin.on('data', this.dataListener);
 
     // stdinのendイベント
-    this.stdin.on('end', () => {
-      this.handleClose();
-    });
+    this.stdin.on('end', this.endListener);
 
     // エラーハンドリング
-    this.stdin.on('error', (error: Error) => {
-      this.emitError(error);
-    });
-
-    this.stdout.on('error', (error: Error) => {
-      this.emitError(error);
-    });
+    this.stdin.on('error', this.stdinErrorListener);
+    this.stdout.on('error', this.stdoutErrorListener);
 
     this.connected = true;
   }
@@ -117,9 +131,19 @@ export class StdioTransport {
       return;
     }
 
-    // リスナーをクリア
-    this.stdin.removeAllListeners();
-    this.stdout.removeAllListeners();
+    // 保存されたリスナーのみを削除（他のモジュールのリスナーには影響しない）
+    if (this.dataListener) {
+      this.stdin.off('data', this.dataListener);
+    }
+    if (this.endListener) {
+      this.stdin.off('end', this.endListener);
+    }
+    if (this.stdinErrorListener) {
+      this.stdin.off('error', this.stdinErrorListener);
+    }
+    if (this.stdoutErrorListener) {
+      this.stdout.off('error', this.stdoutErrorListener);
+    }
 
     // クローズハンドラーを通知（connected/closedフラグはhandleClose()で設定される）
     this.handleClose();
