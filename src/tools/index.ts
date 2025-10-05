@@ -11,13 +11,13 @@ import {
   FileOperationsTool,
   ReadFileSchema,
   WriteFileSchema,
-  ListDirectorySchema
+  ListDirectorySchema,
 } from './file-operations.js';
 import {
   ProjectManagementTool,
   GetProjectInfoSchema,
   SearchFilesSchema,
-  GetWorkspaceStructureSchema
+  GetWorkspaceStructureSchema,
 } from './project-management.js';
 import {
   EditorControlTool,
@@ -25,8 +25,15 @@ import {
   OpenFileSchema,
   GetActiveFileSchema,
   InsertTextSchema,
-  ReplaceTextSchema
+  ReplaceTextSchema,
 } from './editor-control.js';
+import {
+  ModelInfoTool,
+  CursorModelAPI,
+  GetCurrentModelSchema,
+  TrackTokenUsageSchema,
+  GetModelStatisticsSchema,
+} from './model-info.js';
 
 /**
  * ファイル操作ツールをツールレジストリに登録する
@@ -52,9 +59,9 @@ export function registerFileOperationsTools(
           content: [
             {
               type: 'text',
-              text: JSON.stringify(result, null, 2)
-            }
-          ]
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -62,13 +69,13 @@ export function registerFileOperationsTools(
           content: [
             {
               type: 'text',
-              text: `Error: ${errorMessage}`
-            }
+              text: `Error: ${errorMessage}`,
+            },
           ],
-          isError: true
+          isError: true,
         };
       }
-    }
+    },
   });
 
   // write_file ツールを登録
@@ -83,9 +90,9 @@ export function registerFileOperationsTools(
           content: [
             {
               type: 'text',
-              text: JSON.stringify(result, null, 2)
-            }
-          ]
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -93,19 +100,20 @@ export function registerFileOperationsTools(
           content: [
             {
               type: 'text',
-              text: `Error: ${errorMessage}`
-            }
+              text: `Error: ${errorMessage}`,
+            },
           ],
-          isError: true
+          isError: true,
         };
       }
-    }
+    },
   });
 
   // list_directory ツールを登録
   registry.register({
     name: 'list_directory',
-    description: 'ディレクトリの内容を一覧表示します。再帰的な取得やglobパターンフィルタリングに対応しています。',
+    description:
+      'ディレクトリの内容を一覧表示します。再帰的な取得やglobパターンフィルタリングに対応しています。',
     schema: ListDirectorySchema,
     handler: async (params) => {
       try {
@@ -114,9 +122,9 @@ export function registerFileOperationsTools(
           content: [
             {
               type: 'text',
-              text: JSON.stringify(result, null, 2)
-            }
-          ]
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -124,13 +132,13 @@ export function registerFileOperationsTools(
           content: [
             {
               type: 'text',
-              text: `Error: ${errorMessage}`
-            }
+              text: `Error: ${errorMessage}`,
+            },
           ],
-          isError: true
+          isError: true,
         };
       }
-    }
+    },
   });
 }
 
@@ -158,9 +166,9 @@ export function registerProjectManagementTools(
           content: [
             {
               type: 'text',
-              text: JSON.stringify(result, null, 2)
-            }
-          ]
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -168,19 +176,20 @@ export function registerProjectManagementTools(
           content: [
             {
               type: 'text',
-              text: `Error: ${errorMessage}`
-            }
+              text: `Error: ${errorMessage}`,
+            },
           ],
-          isError: true
+          isError: true,
         };
       }
-    }
+    },
   });
 
   // search_files ツールを登録
   registry.register({
     name: 'search_files',
-    description: 'glob パターンでファイルを検索します。.gitignore対応、最大結果数制限、ファイルタイプフィルタリングが可能です。',
+    description:
+      'glob パターンでファイルを検索します。.gitignore対応、最大結果数制限、ファイルタイプフィルタリングが可能です。',
     schema: SearchFilesSchema,
     handler: async (params) => {
       try {
@@ -189,9 +198,9 @@ export function registerProjectManagementTools(
           content: [
             {
               type: 'text',
-              text: JSON.stringify(result, null, 2)
-            }
-          ]
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -199,19 +208,20 @@ export function registerProjectManagementTools(
           content: [
             {
               type: 'text',
-              text: `Error: ${errorMessage}`
-            }
+              text: `Error: ${errorMessage}`,
+            },
           ],
-          isError: true
+          isError: true,
         };
       }
-    }
+    },
   });
 
   // get_workspace_structure ツールを登録
   registry.register({
     name: 'get_workspace_structure',
-    description: 'プロジェクトのディレクトリツリー構造をJSON形式で取得します。最大深さ制限と除外パターンに対応しています。',
+    description:
+      'プロジェクトのディレクトリツリー構造をJSON形式で取得します。最大深さ制限と除外パターンに対応しています。',
     schema: GetWorkspaceStructureSchema,
     handler: async (params) => {
       try {
@@ -220,9 +230,9 @@ export function registerProjectManagementTools(
           content: [
             {
               type: 'text',
-              text: JSON.stringify(result, null, 2)
-            }
-          ]
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -230,13 +240,13 @@ export function registerProjectManagementTools(
           content: [
             {
               type: 'text',
-              text: `Error: ${errorMessage}`
-            }
+              text: `Error: ${errorMessage}`,
+            },
           ],
-          isError: true
+          isError: true,
         };
       }
-    }
+    },
   });
 }
 
@@ -254,7 +264,8 @@ export function registerEditorControlTools(
   // open_file_in_editor ツールを登録
   registry.register({
     name: 'open_file_in_editor',
-    description: 'Cursor IDEでファイルを開きます。行番号や列番号を指定してカーソル位置を移動できます。',
+    description:
+      'Cursor IDEでファイルを開きます。行番号や列番号を指定してカーソル位置を移動できます。',
     schema: OpenFileSchema,
     handler: async (params) => {
       try {
@@ -263,9 +274,9 @@ export function registerEditorControlTools(
           content: [
             {
               type: 'text',
-              text: JSON.stringify(result, null, 2)
-            }
-          ]
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -273,19 +284,20 @@ export function registerEditorControlTools(
           content: [
             {
               type: 'text',
-              text: `Error: ${errorMessage}`
-            }
+              text: `Error: ${errorMessage}`,
+            },
           ],
-          isError: true
+          isError: true,
         };
       }
-    }
+    },
   });
 
   // get_active_file ツールを登録
   registry.register({
     name: 'get_active_file',
-    description: '現在Cursor IDEでアクティブになっているファイルの情報（パス、カーソル位置、選択範囲）を取得します。',
+    description:
+      '現在Cursor IDEでアクティブになっているファイルの情報（パス、カーソル位置、選択範囲）を取得します。',
     schema: GetActiveFileSchema,
     handler: async () => {
       try {
@@ -294,9 +306,9 @@ export function registerEditorControlTools(
           content: [
             {
               type: 'text',
-              text: JSON.stringify(result, null, 2)
-            }
-          ]
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -304,19 +316,20 @@ export function registerEditorControlTools(
           content: [
             {
               type: 'text',
-              text: `Error: ${errorMessage}`
-            }
+              text: `Error: ${errorMessage}`,
+            },
           ],
-          isError: true
+          isError: true,
         };
       }
-    }
+    },
   });
 
   // insert_text ツールを登録
   registry.register({
     name: 'insert_text',
-    description: '指定された位置にテキストを挿入します。位置を省略した場合は現在のカーソル位置に挿入します。',
+    description:
+      '指定された位置にテキストを挿入します。位置を省略した場合は現在のカーソル位置に挿入します。',
     schema: InsertTextSchema,
     handler: async (params) => {
       try {
@@ -325,9 +338,9 @@ export function registerEditorControlTools(
           content: [
             {
               type: 'text',
-              text: JSON.stringify(result, null, 2)
-            }
-          ]
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -335,13 +348,13 @@ export function registerEditorControlTools(
           content: [
             {
               type: 'text',
-              text: `Error: ${errorMessage}`
-            }
+              text: `Error: ${errorMessage}`,
+            },
           ],
-          isError: true
+          isError: true,
         };
       }
-    }
+    },
   });
 
   // replace_text ツールを登録
@@ -356,9 +369,9 @@ export function registerEditorControlTools(
           content: [
             {
               type: 'text',
-              text: JSON.stringify(result, null, 2)
-            }
-          ]
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -366,19 +379,129 @@ export function registerEditorControlTools(
           content: [
             {
               type: 'text',
-              text: `Error: ${errorMessage}`
-            }
+              text: `Error: ${errorMessage}`,
+            },
           ],
-          isError: true
+          isError: true,
         };
       }
-    }
+    },
+  });
+}
+
+/**
+ * モデル情報管理ツールをツールレジストリに登録する
+ *
+ * Requirement 8.4: ツールレジストリへの登録処理
+ */
+export function registerModelInfoTools(registry: ToolRegistry, modelAPI: CursorModelAPI): void {
+  const modelInfo = new ModelInfoTool(modelAPI);
+
+  // get_current_model ツールを登録
+  registry.register({
+    name: 'get_current_model',
+    description:
+      '現在Cursor Composerで選択されているAIモデルの情報（名前、プロバイダー、バージョン、コンテキストウィンドウ、コスト）を取得します。',
+    schema: GetCurrentModelSchema,
+    handler: async () => {
+      try {
+        const result = await modelInfo.getCurrentModel();
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${errorMessage}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+    },
+  });
+
+  // track_token_usage ツールを登録
+  registry.register({
+    name: 'track_token_usage',
+    description:
+      'AIモデルのトークン使用量を記録します。入力トークン数、出力トークン数、実行時間を追跡します。',
+    schema: TrackTokenUsageSchema,
+    handler: async (params) => {
+      try {
+        await modelInfo.trackTokenUsage(params);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(
+                { success: true, message: 'Token usage tracked successfully' },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${errorMessage}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+    },
+  });
+
+  // get_model_statistics ツールを登録
+  registry.register({
+    name: 'get_model_statistics',
+    description:
+      'モデル使用統計情報（累積トークン数、推定コスト、平均実行時間、モデル別内訳）を取得します。',
+    schema: GetModelStatisticsSchema,
+    handler: async () => {
+      try {
+        const result = await modelInfo.getModelStatistics();
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${errorMessage}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+    },
   });
 }
 
 export { FileOperationsTool } from './file-operations.js';
 export { ProjectManagementTool } from './project-management.js';
 export { EditorControlTool } from './editor-control.js';
+export { ModelInfoTool } from './model-info.js';
 
 export type {
   ReadFileParams,
@@ -387,7 +510,7 @@ export type {
   WriteFileResult,
   ListDirectoryParams,
   ListDirectoryResult,
-  FileEntry
+  FileEntry,
 } from './file-operations.js';
 
 export type {
@@ -398,7 +521,7 @@ export type {
   GetWorkspaceStructureParams,
   WorkspaceStructure,
   DirectoryNode,
-  FileNode
+  FileNode,
 } from './project-management.js';
 
 export type {
@@ -410,5 +533,15 @@ export type {
   ReplaceTextParams,
   EditResult,
   Position,
-  CursorEditorAPI
+  CursorEditorAPI,
 } from './editor-control.js';
+
+export type {
+  ModelInfo,
+  GetCurrentModelParams,
+  TrackTokenUsageParams,
+  GetModelStatisticsParams,
+  ModelStatistics,
+  ModelUsage,
+  CursorModelAPI,
+} from './model-info.js';

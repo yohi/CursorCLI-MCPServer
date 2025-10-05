@@ -106,10 +106,10 @@ export class LoggingSystem {
       ...context,
       error: error
         ? {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-        }
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+          }
         : undefined,
     });
   }
@@ -122,10 +122,10 @@ export class LoggingSystem {
       ...context,
       error: error
         ? {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-        }
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+          }
         : undefined,
     });
   }

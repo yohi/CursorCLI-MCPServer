@@ -13,7 +13,7 @@ import type {
   CallToolResult,
   ClientInfo,
   ServerInfo,
-  ToolDefinition
+  ToolDefinition,
 } from './types.js';
 
 /**
@@ -71,7 +71,7 @@ export class MCPProtocolHandler {
   constructor(config: ServerConfig) {
     this.serverInfo = {
       name: config.name,
-      version: config.version
+      version: config.version,
     };
   }
 
@@ -99,9 +99,9 @@ export class MCPProtocolHandler {
       protocolVersion: request.protocolVersion,
       capabilities: {
         tools: {},
-        logging: {}
+        logging: {},
       },
-      serverInfo: this.serverInfo
+      serverInfo: this.serverInfo,
     };
   }
 
@@ -114,7 +114,7 @@ export class MCPProtocolHandler {
     this.ensureInitialized();
 
     return {
-      tools: Array.from(this.tools.values())
+      tools: Array.from(this.tools.values()),
     };
   }
 

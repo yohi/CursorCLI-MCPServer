@@ -199,7 +199,9 @@ export class StdioTransport {
         const message = JSON.parse(line) as JSONRPCMessage;
         this.emitMessage(message);
       } catch (error) {
-        this.emitError(new Error(`Invalid JSON: ${error instanceof Error ? error.message : 'Unknown error'}`));
+        this.emitError(
+          new Error(`Invalid JSON: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        );
       }
     }
   }

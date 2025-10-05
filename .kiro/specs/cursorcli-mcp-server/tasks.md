@@ -198,8 +198,8 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - ツールレジストリへの登録処理（registerEditorControlTools）
   - _Requirements: 4.6_
 
-- [ ] 8. モデル情報管理ツールの実装
-- [ ] 8.1 現在のモデル情報取得（get_current_model）
+- [x] 8. モデル情報管理ツールの実装
+- [x] 8.1 現在のモデル情報取得（get_current_model）
   - get_current_modelツールのスキーマ定義
   - Cursor Composerからのモデル情報取得
   - モデルメタデータの整形（名前、プロバイダー、バージョン）
@@ -208,7 +208,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - モデル情報取得失敗時のデフォルト値返却
   - _Requirements: 10.1, 10.2, 10.7_
 
-- [ ] 8.2 トークン使用量追跡機能（track_token_usage）
+- [x] 8.2 トークン使用量追跡機能（track_token_usage）
   - track_token_usageツールのスキーマ定義
   - トークン統計ストアの実装（in-memory）
   - 入力/出力トークン数の記録
@@ -217,7 +217,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - 統計データの永続化準備（将来対応）
   - _Requirements: 10.3, 10.6_
 
-- [ ] 8.3 モデル統計情報取得（get_model_statistics）
+- [x] 8.3 モデル統計情報取得（get_model_statistics）
   - get_model_statisticsツールのスキーマ定義
   - 累積トークン使用量の計算
   - 推定コストの算出
@@ -225,7 +225,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - モデル別内訳の生成
   - _Requirements: 10.6_
 
-- [ ] 8.4 モデル切り替え検知とコスト警告
+- [x] 8.4 モデル切り替え検知とコスト警告
   - モデル変更イベントのログ記録
   - 高コストモデル使用時の警告機能
   - モデル設定の永続化（.cursorcli-mcp/model-preferences.json）

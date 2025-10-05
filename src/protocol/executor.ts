@@ -63,10 +63,7 @@ export class ToolExecutor {
   /**
    * ツールを実行する
    */
-  async execute(
-    toolName: string,
-    params: Record<string, unknown>
-  ): Promise<CallToolResult> {
+  async execute(toolName: string, params: Record<string, unknown>): Promise<CallToolResult> {
     // ツールの存在確認
     const tool = this.registry.get(toolName);
     if (!tool) {
