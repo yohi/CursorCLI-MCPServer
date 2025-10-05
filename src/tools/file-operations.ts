@@ -163,7 +163,11 @@ export class FileOperationsTool {
         const fileHandle = await fs.open(resolvedPath, 'r');
         try {
           buffer = Buffer.alloc(desiredLength);
-          await fileHandle.read(buffer, 0, desiredLength, readOffset);
+          const { bytesRead } = await fileHandle.read(buffer, 0, desiredLength, readOffset);
+          // 実際に読み取られたバイト数がdesiredLengthより少ない場合、バッファをスライス
+          if (bytesRead < desiredLength) {
+            buffer = buffer.slice(0, bytesRead);
+          }
         } finally {
           await fileHandle.close();
         }
