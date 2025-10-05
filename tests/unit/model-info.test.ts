@@ -243,6 +243,39 @@ describe('ModelInfoTool', () => {
         expect(stats.estimatedCost).toBe(0.09);
       });
 
+      it('モデル切替時も各レコードの単価で正しくコスト計算できる', async () => {
+        // gpt-4で記録 (input $0.03, output $0.06)
+        await modelInfoTool.trackTokenUsage({
+          modelName: 'gpt-4',
+          inputTokens: 1000,
+          outputTokens: 1000,
+          duration: 1500
+        });
+
+        // モデルを変更
+        mockModelAPI.getCurrentModel = jest.fn().mockResolvedValue({
+          name: 'claude-3-opus',
+          provider: 'anthropic',
+          contextWindow: 200000,
+          costPer1kTokens: { input: 0.015, output: 0.075 }
+        });
+
+        // claude-3-opusで記録 (input $0.015, output $0.075)
+        await modelInfoTool.trackTokenUsage({
+          modelName: 'claude-3-opus',
+          inputTokens: 2000,
+          outputTokens: 2000,
+          duration: 2000
+        });
+
+        const stats = await modelInfoTool.getModelStatistics();
+
+        // gpt-4: (1000/1000 * 0.03) + (1000/1000 * 0.06) = 0.09
+        // claude-3-opus: (2000/1000 * 0.015) + (2000/1000 * 0.075) = 0.18
+        // 合計: 0.09 + 0.18 = 0.27
+        expect(stats.estimatedCost).toBeCloseTo(0.27, 5);
+      });
+
       it('コスト情報が無いモデルはコストを0とする', async () => {
         mockModelAPI.getCurrentModel = jest.fn().mockResolvedValue({
           name: 'unknown-model',
@@ -296,8 +329,8 @@ describe('ModelInfoTool', () => {
       // 再度取得
       await modelInfoTool.getCurrentModel();
 
-      // モデル変更ログが記録されることを確認（実装で要対応）
-      // expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('model_changed'));
+      // モデル変更ログが記録されることを確認
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Model changed'));
 
       logSpy.mockRestore();
     });

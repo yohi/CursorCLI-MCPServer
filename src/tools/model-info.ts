@@ -91,6 +91,7 @@ interface TokenUsageRecord {
   outputTokens: number;
   duration: number;
   timestamp: Date;
+  costPer1kTokens?: ModelInfo['costPer1kTokens'];
 }
 
 /**
@@ -144,12 +145,32 @@ export class ModelInfoTool {
    * Requirement 10.6: トークン消費量の追跡
    */
   async trackTokenUsage(params: TrackTokenUsageParams): Promise<void> {
+    // コスト情報を取得
+    let costPer1kTokens: ModelInfo['costPer1kTokens'] | undefined;
+
+    // 最後に取得したモデル情報がキャッシュされていて、同じモデル名ならそれを使用
+    if (this.lastModelInfo && this.lastModelInfo.name === params.modelName) {
+      costPer1kTokens = this.lastModelInfo.costPer1kTokens;
+    } else {
+      // 異なるモデルの場合は現在のモデル情報を取得
+      try {
+        const currentModel = await this.getCurrentModel();
+        if (currentModel.name === params.modelName) {
+          costPer1kTokens = currentModel.costPer1kTokens;
+        }
+      } catch (error) {
+        // モデル情報取得失敗時はコスト情報なしで記録
+        console.warn('Failed to get model cost info:', error);
+      }
+    }
+
     const record: TokenUsageRecord = {
       modelName: params.modelName,
       inputTokens: params.inputTokens,
       outputTokens: params.outputTokens,
       duration: params.duration,
       timestamp: new Date(),
+      costPer1kTokens,
     };
 
     this.usageRecords.push(record);
@@ -208,19 +229,15 @@ export class ModelInfoTool {
       modelBreakdown[modelName].averageDuration = totalDuration / records.length;
     }
 
-    // 推定コストの計算
-    let estimatedCost = 0;
-    try {
-      const currentModel = await this.modelAPI.getCurrentModel();
-      if (currentModel.costPer1kTokens) {
-        const inputCost = (totalTokensUsed.input / 1000) * currentModel.costPer1kTokens.input;
-        const outputCost = (totalTokensUsed.output / 1000) * currentModel.costPer1kTokens.output;
-        estimatedCost = inputCost + outputCost;
+    // 推定コストの計算（各レコードのコスト情報を使用）
+    const estimatedCost = this.usageRecords.reduce((acc, record) => {
+      if (!record.costPer1kTokens) {
+        return acc;
       }
-    } catch (error) {
-      // コスト情報取得失敗時は0とする
-      console.warn('Failed to calculate cost:', error);
-    }
+      const inputCost = (record.inputTokens / 1000) * record.costPer1kTokens.input;
+      const outputCost = (record.outputTokens / 1000) * record.costPer1kTokens.output;
+      return acc + inputCost + outputCost;
+    }, 0);
 
     return {
       totalSessions,
