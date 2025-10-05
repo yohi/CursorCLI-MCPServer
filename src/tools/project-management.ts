@@ -204,8 +204,11 @@ export class ProjectManagementTool {
         const fullPath = path.join(dir, entry.name);
         const relativePath = path.relative(this.projectRoot, fullPath);
 
+        // Windows対応: バックスラッシュをフォワードスラッシュに変換
+        const posixPath = relativePath.replace(/\\/g, '/');
+
         // .gitignore チェック（ディレクトリの場合は末尾に / を追加）
-        const pathToCheck = entry.isDirectory() ? `${relativePath}/` : relativePath;
+        const pathToCheck = entry.isDirectory() ? `${posixPath}/` : posixPath;
         if (ig && ig.ignores(pathToCheck)) {
           continue;
         }
@@ -217,8 +220,8 @@ export class ProjectManagementTool {
         if (fileType === 'file' && !isFile) continue;
         if (fileType === 'directory' && !isDirectory) continue;
 
-        // glob パターンマッチング
-        if (minimatch(relativePath, pattern)) {
+        // glob パターンマッチング（POSIX形式のパスを使用）
+        if (minimatch(posixPath, pattern)) {
           const stats = await fs.stat(fullPath);
           allFiles.push({
             path: fullPath,
@@ -266,9 +269,20 @@ export class ProjectManagementTool {
       const relativePath = path.relative(this.projectRoot, dirPath);
       const name = path.basename(dirPath);
 
-      // ルート以外の場合、除外パターンチェック
-      if (relativePath !== '') {
-        const pathToCheck = stats.isDirectory() ? `${relativePath}/` : relativePath;
+      // Windows対応: バックスラッシュをフォワードスラッシュに変換してPOSIX形式に
+      const posixPath = relativePath.replace(/\\/g, '/');
+
+      // セキュリティ検証（POSIX形式のパスを使用）
+      if (posixPath !== '') {
+        const validateResult = this.securityValidator.validatePath(dirPath);
+        if (!validateResult.ok) {
+          return null; // ブロックされたパスは除外
+        }
+      }
+
+      // 除外パターンチェック（POSIX形式のパスを使用）
+      if (posixPath !== '') {
+        const pathToCheck = stats.isDirectory() ? `${posixPath}/` : posixPath;
         for (const pattern of excludePatterns) {
           if (minimatch(pathToCheck, pattern)) {
             return null;
