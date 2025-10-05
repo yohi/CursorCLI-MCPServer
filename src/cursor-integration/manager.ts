@@ -7,6 +7,7 @@
 
 import fs from 'fs/promises';
 import path from 'path';
+import os from 'os';
 import chokidar from 'chokidar';
 import { CursorSettingsSchema, type CursorSettings, DEFAULT_CURSOR_SETTINGS } from './schema.js';
 
@@ -34,9 +35,13 @@ export class CursorIntegrationManager {
 
   constructor(options: CursorIntegrationOptions = {}) {
     // Cursor設定ファイルのパスを決定
-    this.cursorConfigPath =
-      options.cursorConfigPath ||
-      path.join(process.env.HOME || process.env.USERPROFILE || '', '.cursor', 'settings.json');
+    if (options.cursorConfigPath) {
+      this.cursorConfigPath = options.cursorConfigPath;
+    } else {
+      // os.homedir()を使用し、falsyの場合はprocess.cwd()にフォールバック
+      const resolvedHome = os.homedir() || process.cwd();
+      this.cursorConfigPath = path.join(resolvedHome, '.cursor', 'settings.json');
+    }
   }
 
   /**
@@ -53,11 +58,23 @@ export class CursorIntegrationManager {
 
       // バリデーション
       this.cursorSettings = CursorSettingsSchema.parse(parsedSettings);
+
+      // mcpServersが確実に存在することを保証
+      if (!this.cursorSettings.mcpServers) {
+        this.cursorSettings.mcpServers = {};
+      }
+
       return this.cursorSettings;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         // 設定ファイルが存在しない場合、デフォルト設定を返す
         this.cursorSettings = { ...DEFAULT_CURSOR_SETTINGS };
+
+        // mcpServersが確実に存在することを保証
+        if (!this.cursorSettings.mcpServers) {
+          this.cursorSettings.mcpServers = {};
+        }
+
         return this.cursorSettings;
       }
       throw error;
@@ -119,12 +136,14 @@ export class CursorIntegrationManager {
       await this.loadCursorConfig();
     }
 
-    if (!this.cursorSettings || !this.cursorSettings.mcpServers[serverName]) {
+    // optional chainingを使用してサーバー設定の存在を確認
+    const serverConfig = this.cursorSettings?.mcpServers?.[serverName];
+    if (!serverConfig) {
       throw new Error(`Server "${serverName}" not found in Cursor settings`);
     }
 
     // disabled フラグを false に設定
-    this.cursorSettings.mcpServers[serverName].disabled = false;
+    serverConfig.disabled = false;
 
     // 設定ファイルに書き込み
     await this.saveCursorConfig();
@@ -138,12 +157,14 @@ export class CursorIntegrationManager {
       await this.loadCursorConfig();
     }
 
-    if (!this.cursorSettings || !this.cursorSettings.mcpServers[serverName]) {
+    // optional chainingを使用してサーバー設定の存在を確認
+    const serverConfig = this.cursorSettings?.mcpServers?.[serverName];
+    if (!serverConfig) {
       throw new Error(`Server "${serverName}" not found in Cursor settings`);
     }
 
     // disabled フラグを true に設定
-    this.cursorSettings.mcpServers[serverName].disabled = true;
+    serverConfig.disabled = true;
 
     // 設定ファイルに書き込み
     await this.saveCursorConfig();
