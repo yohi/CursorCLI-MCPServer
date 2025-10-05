@@ -131,8 +131,8 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - ツールレジストリへの登録処理
   - _Requirements: 2.5, 5.1, 5.2_
 
-- [ ] 6. プロジェクト管理ツールの実装
-- [ ] 6.1 プロジェクト情報取得機能（get_project_info）
+- [x] 6. プロジェクト管理ツールの実装
+- [x] 6.1 プロジェクト情報取得機能（get_project_info）
   - get_project_infoツールのスキーマ定義
   - プロジェクトルートパスの取得
   - プロジェクト設定ファイルの読み込み（.cursor/settings.json）
@@ -140,7 +140,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - プロジェクト未初期化時のエラー処理
   - _Requirements: 3.1, 3.4, 3.5_
 
-- [ ] 6.2 ファイル検索機能（search_files）
+- [x] 6.2 ファイル検索機能（search_files）
   - search_filesツールのスキーマ定義
   - glob パターンによるファイル検索
   - .gitignore対応の実装
@@ -148,7 +148,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - 検索結果のソートとフィルタリング
   - _Requirements: 3.2, 8.4_
 
-- [ ] 6.3 ワークスペース構造取得機能（get_workspace_structure）
+- [x] 6.3 ワークスペース構造取得機能（get_workspace_structure）
   - get_workspace_structureツールのスキーマ定義
   - ディレクトリツリーの再帰的構築
   - 最大深さ制限の実装
@@ -156,7 +156,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - ツリー構造のJSON変換
   - _Requirements: 3.3_
 
-- [ ] 6.4 プロジェクト管理ツールの統合
+- [x] 6.4 プロジェクト管理ツールの統合
   - プロジェクト管理共通のエラーハンドリング
   - プロジェクト未初期化エラーの処理
   - CursorCLI Project APIとの統合

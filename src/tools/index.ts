@@ -13,6 +13,12 @@ import {
   WriteFileSchema,
   ListDirectorySchema
 } from './file-operations.js';
+import {
+  ProjectManagementTool,
+  GetProjectInfoSchema,
+  SearchFilesSchema,
+  GetWorkspaceStructureSchema
+} from './project-management.js';
 
 /**
  * ファイル操作ツールをツールレジストリに登録する
@@ -120,7 +126,115 @@ export function registerFileOperationsTools(
   });
 }
 
+/**
+ * プロジェクト管理ツールをツールレジストリに登録する
+ *
+ * Requirement 6.4: ツールレジストリへの登録処理
+ */
+export function registerProjectManagementTools(
+  registry: ToolRegistry,
+  securityValidator: SecurityValidator,
+  projectRoot: string
+): void {
+  const projectMgmt = new ProjectManagementTool(projectRoot, securityValidator);
+
+  // get_project_info ツールを登録
+  registry.register({
+    name: 'get_project_info',
+    description: 'プロジェクトの情報（名前、ルートパス、設定、言語、フレームワーク）を取得します。',
+    schema: GetProjectInfoSchema,
+    handler: async () => {
+      try {
+        const result = await projectMgmt.getProjectInfo();
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2)
+            }
+          ]
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${errorMessage}`
+            }
+          ],
+          isError: true
+        };
+      }
+    }
+  });
+
+  // search_files ツールを登録
+  registry.register({
+    name: 'search_files',
+    description: 'glob パターンでファイルを検索します。.gitignore対応、最大結果数制限、ファイルタイプフィルタリングが可能です。',
+    schema: SearchFilesSchema,
+    handler: async (params) => {
+      try {
+        const result = await projectMgmt.searchFiles(params);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2)
+            }
+          ]
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${errorMessage}`
+            }
+          ],
+          isError: true
+        };
+      }
+    }
+  });
+
+  // get_workspace_structure ツールを登録
+  registry.register({
+    name: 'get_workspace_structure',
+    description: 'プロジェクトのディレクトリツリー構造をJSON形式で取得します。最大深さ制限と除外パターンに対応しています。',
+    schema: GetWorkspaceStructureSchema,
+    handler: async (params) => {
+      try {
+        const result = await projectMgmt.getWorkspaceStructure(params);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2)
+            }
+          ]
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${errorMessage}`
+            }
+          ],
+          isError: true
+        };
+      }
+    }
+  });
+}
+
 export { FileOperationsTool } from './file-operations.js';
+export { ProjectManagementTool } from './project-management.js';
+
 export type {
   ReadFileParams,
   ReadFileResult,
@@ -130,3 +244,14 @@ export type {
   ListDirectoryResult,
   FileEntry
 } from './file-operations.js';
+
+export type {
+  ProjectInfo,
+  SearchFilesParams,
+  SearchFilesResult,
+  SearchResult,
+  GetWorkspaceStructureParams,
+  WorkspaceStructure,
+  DirectoryNode,
+  FileNode
+} from './project-management.js';
