@@ -8,6 +8,7 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { z } from 'zod';
+import { minimatch } from 'minimatch';
 import type { SecurityValidator } from '../security/validator.js';
 
 /**
@@ -57,6 +58,39 @@ export interface WriteFileResult {
 }
 
 /**
+ * list_directory ツールのスキーマ
+ */
+export const ListDirectorySchema = z.object({
+  path: z.string().describe('一覧を取得するディレクトリパス'),
+  recursive: z.boolean().default(false).optional().describe('サブディレクトリの再帰的取得'),
+  includeHidden: z.boolean().default(false).optional().describe('隠しファイルの含有'),
+  pattern: z.string().optional().describe('ファイル名のglob パターン（例: *.ts）')
+});
+
+export type ListDirectoryParams = z.infer<typeof ListDirectorySchema>;
+
+/**
+ * ファイルエントリ
+ */
+export interface FileEntry {
+  name: string;
+  path: string;
+  type: 'file' | 'directory' | 'symlink';
+  size: number;
+  lastModified: string;
+  permissions: string;
+}
+
+/**
+ * list_directory ツールの結果
+ */
+export interface ListDirectoryResult {
+  entries: FileEntry[];
+  totalCount: number;
+  path: string;
+}
+
+/**
  * File Operations Tool
  *
  * Requirement 2.1-2.6: ファイル操作機能のMCPツール化
@@ -102,44 +136,51 @@ export class FileOperationsTool {
         throw new Error(`Path is not a file: ${validated.path}`);
       }
 
-      // エンコーディングの処理
+      const fileSize = stats.size;
       const encoding = validated.encoding || 'utf-8';
+
+      // 読み取りオフセットと長さの決定
+      const readOffset = validated.offset ?? 0;
+      const availableBytes = Math.max(0, fileSize - readOffset);
+      const requestedLength = validated.length ?? Math.min(availableBytes, this.MAX_FILE_SIZE);
+      const desiredLength = Math.min(requestedLength, this.MAX_FILE_SIZE, availableBytes);
+
+      // truncatedフラグの判定
+      // 1. lengthが未指定で、利用可能バイト数がMAX_FILE_SIZEを超える場合
+      // 2. lengthが指定されたが、実際に読める長さがそれより小さい場合
+      const truncated =
+        (validated.length === undefined && availableBytes > this.MAX_FILE_SIZE) ||
+        (validated.length !== undefined && desiredLength < validated.length);
+
       let content: string;
-      let actualSize: number;
-      let truncated = false;
+      let buffer: Buffer;
 
-      if (encoding === 'binary') {
-        // バイナリファイルの読み込み
-        const buffer = await this.readFileWithLimits(
-          resolvedPath,
-          validated.offset,
-          validated.length
-        );
-        content = buffer.toString('base64');
-        actualSize = buffer.length;
-        truncated = stats.size > this.MAX_FILE_SIZE && !validated.length;
+      // フルファイル高速パス: offset=0 かつ desiredLength >= fileSize の場合
+      if (readOffset === 0 && desiredLength >= fileSize) {
+        buffer = await fs.readFile(resolvedPath);
       } else {
-        // テキストファイルの読み込み
-        const buffer = await this.readFileWithLimits(
-          resolvedPath,
-          validated.offset,
-          validated.length
-        );
-
-        // エンコーディングに応じて変換
-        if (encoding === 'utf-16le') {
-          content = buffer.toString('utf16le');
-        } else {
-          content = buffer.toString('utf8');
+        // 部分読み込み: ファイルディスクリプタを使用
+        const fileHandle = await fs.open(resolvedPath, 'r');
+        try {
+          buffer = Buffer.alloc(desiredLength);
+          await fileHandle.read(buffer, 0, desiredLength, readOffset);
+        } finally {
+          await fileHandle.close();
         }
+      }
 
-        actualSize = buffer.length;
-        truncated = stats.size > this.MAX_FILE_SIZE && !validated.length;
+      // エンコーディングに応じて変換
+      if (encoding === 'binary') {
+        content = buffer.toString('base64');
+      } else if (encoding === 'utf-16le') {
+        content = buffer.toString('utf16le');
+      } else {
+        content = buffer.toString('utf8');
       }
 
       return {
         content,
-        size: actualSize,
+        size: buffer.length,
         encoding,
         truncated,
         lastModified: stats.mtime.toISOString()
@@ -152,39 +193,6 @@ export class FileOperationsTool {
         throw new Error(`Permission denied: ${validated.path}`);
       }
       throw error;
-    }
-  }
-
-  /**
-   * ファイルをサイズ制限付きで読み込む
-   */
-  private async readFileWithLimits(
-    filePath: string,
-    offset?: number,
-    length?: number
-  ): Promise<Buffer> {
-    const stats = await fs.stat(filePath);
-
-    // 読み取り範囲の決定
-    const startOffset = Math.max(0, offset ?? 0);
-
-    // offsetがファイルサイズ以上の場合は空バッファを返す
-    if (startOffset >= stats.size) {
-      return Buffer.alloc(0);
-    }
-
-    const maxLength = Math.min(length ?? this.MAX_FILE_SIZE, this.MAX_FILE_SIZE);
-    const remaining = stats.size - startOffset;
-    const actualLength = Math.min(maxLength, remaining);
-
-    // ファイルハンドルを開いて部分的に読み込み
-    const fileHandle = await fs.open(filePath, 'r');
-    try {
-      const buffer = Buffer.alloc(actualLength);
-      await fileHandle.read(buffer, 0, actualLength, startOffset);
-      return buffer;
-    } finally {
-      await fileHandle.close();
     }
   }
 
@@ -262,6 +270,134 @@ export class FileOperationsTool {
         throw new Error(`Permission denied: ${validated.path}`);
       }
       throw error;
+    }
+  }
+
+  /**
+   * ディレクトリの内容を一覧取得する
+   *
+   * Requirement 2.3: ディレクトリ内容のリスト形式での返却
+   * Requirement 2.4: プロジェクトルート外アクセスの拒否
+   * Requirement 2.5: 詳細なエラー情報の返却
+   * Requirement 2.6: 相対パスの解決
+   */
+  async listDirectory(params: ListDirectoryParams): Promise<ListDirectoryResult> {
+    // パラメータのバリデーション
+    const validated = ListDirectorySchema.parse(params);
+
+    // パスの解決（相対パス対応）
+    const resolvedPath = path.isAbsolute(validated.path)
+      ? validated.path
+      : path.join(this.projectRoot, validated.path);
+
+    // セキュリティ検証
+    const securityResult = this.securityValidator.validatePath(resolvedPath);
+    if (!securityResult.ok) {
+      throw new Error(`Security error: ${securityResult.error.message}`);
+    }
+
+    try {
+      // ディレクトリの存在確認
+      const stats = await fs.stat(resolvedPath);
+
+      if (!stats.isDirectory()) {
+        throw new Error(`Path is not a directory: ${validated.path}`);
+      }
+
+      // デフォルト値の設定
+      const recursive = validated.recursive ?? false;
+      const includeHidden = validated.includeHidden ?? false;
+      const pattern = validated.pattern;
+
+      // エントリを収集
+      const entries: FileEntry[] = [];
+      await this.collectEntries(resolvedPath, entries, {
+        recursive,
+        includeHidden,
+        pattern,
+        basePath: resolvedPath
+      });
+
+      return {
+        entries,
+        totalCount: entries.length,
+        path: resolvedPath
+      };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        throw new Error(`Directory not found: ${validated.path}`);
+      }
+      if ((error as NodeJS.ErrnoException).code === 'EACCES') {
+        throw new Error(`Permission denied: ${validated.path}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * ディレクトリエントリを再帰的に収集する
+   */
+  private async collectEntries(
+    dirPath: string,
+    entries: FileEntry[],
+    options: {
+      recursive: boolean;
+      includeHidden: boolean;
+      pattern?: string;
+      basePath: string;
+    }
+  ): Promise<void> {
+    const dirEntries = await fs.readdir(dirPath);
+
+    for (const entryName of dirEntries) {
+      // 隠しファイルのフィルタリング
+      if (!options.includeHidden && entryName.startsWith('.')) {
+        continue;
+      }
+
+      const entryPath = path.join(dirPath, entryName);
+
+      // lstatを使用（シンボリックリンクをそのまま扱う）
+      const stats = await fs.lstat(entryPath);
+
+      // エントリタイプの判定
+      let type: 'file' | 'directory' | 'symlink';
+      if (stats.isSymbolicLink()) {
+        type = 'symlink';
+      } else if (stats.isDirectory()) {
+        type = 'directory';
+      } else {
+        type = 'file';
+      }
+
+      // globパターンマッチング
+      if (options.pattern && !minimatch(entryName, options.pattern)) {
+        // パターンにマッチしない場合はスキップ
+        // ただし、再帰処理の場合はディレクトリは処理を続ける
+        if (!options.recursive || type !== 'directory') {
+          continue;
+        }
+      }
+
+      // パーミッション文字列の生成（8進数）
+      const permissions = (stats.mode & 0o777).toString(8).padStart(3, '0');
+
+      // エントリを追加（パターンマッチする場合、またはディレクトリで再帰モードの場合）
+      if (!options.pattern || minimatch(entryName, options.pattern) || (options.recursive && type === 'directory')) {
+        entries.push({
+          name: entryName,
+          path: entryPath,
+          type,
+          size: type === 'directory' ? 0 : stats.size,
+          lastModified: stats.mtime.toISOString(),
+          permissions
+        });
+      }
+
+      // 再帰的にサブディレクトリを処理
+      if (options.recursive && type === 'directory') {
+        await this.collectEntries(entryPath, entries, options);
+      }
     }
   }
 }

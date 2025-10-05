@@ -95,7 +95,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - ツール実行結果のフォーマット処理
   - _Requirements: 5.4, 8.1, 8.2_
 
-- [ ] 5. ファイル操作ツールの実装
+- [x] 5. ファイル操作ツールの実装
 - [x] 5.1 ファイル読み込み機能（read_file）
   - read_fileツールのスキーマ定義（Zodスキーマ）
   - ファイル存在確認とアクセス権チェック
@@ -114,7 +114,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - 書き込み結果のレスポンス生成
   - _Requirements: 2.2, 2.5, 5.5_
 
-- [ ] 5.3 ディレクトリ一覧取得機能（list_directory）
+- [x] 5.3 ディレクトリ一覧取得機能（list_directory）
   - list_directoryツールのスキーマ定義
   - ディレクトリ存在確認とアクセス権チェック
   - ファイルとディレクトリの一覧取得
@@ -123,7 +123,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - glob パターンによるフィルタリング
   - _Requirements: 2.3, 8.4_
 
-- [ ] 5.4 ファイル操作の統合とエラーハンドリング
+- [x] 5.4 ファイル操作の統合とエラーハンドリング
   - ファイル操作共通のエラーハンドリング処理
   - NotFoundError、PermissionError、IOErrorの処理
   - セキュリティ検証との統合
