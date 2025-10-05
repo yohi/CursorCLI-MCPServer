@@ -88,21 +88,24 @@ export interface CallToolRequest {
 /**
  * ツールレスポンスコンテンツ
  */
-export type ToolResponseContent = {
-  type: 'text';
-  text: string;
-} | {
-  type: 'image';
-  data: string;
-  mimeType: string;
-} | {
-  type: 'resource';
-  resource: {
-    uri: string;
-    mimeType?: string;
-    text?: string;
-  };
-};
+export type ToolResponseContent =
+  | {
+      type: 'text';
+      text: string;
+    }
+  | {
+      type: 'image';
+      data: string;
+      mimeType: string;
+    }
+  | {
+      type: 'resource';
+      resource: {
+        uri: string;
+        mimeType?: string;
+        text?: string;
+      };
+    };
 
 /**
  * ツール呼び出し結果

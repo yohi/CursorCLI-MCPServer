@@ -23,7 +23,10 @@ process.on('SIGINT', async () => {
     await logger.shutdown();
     process.exit(0);
   } catch (error) {
-    logger.error('Error during shutdown', error instanceof Error ? error : new Error(String(error)));
+    logger.error(
+      'Error during shutdown',
+      error instanceof Error ? error : new Error(String(error))
+    );
     process.exit(1);
   }
 });

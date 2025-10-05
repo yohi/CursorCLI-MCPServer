@@ -68,10 +68,10 @@ export class SecurityValidator {
     const isWindows = process.platform === 'win32';
     this.compiledPatterns = this.blockedPatterns.map((pattern) => {
       return new Minimatch(pattern, {
-        dot: true,           // .で始まるファイルもマッチ
-        nonegate: true,      // !による否定を無効化（セキュリティ上の理由）
-        nocomment: true,     // #によるコメントを無効化（セキュリティ上の理由）
-        nocase: isWindows,   // Windows環境ではケースインセンシティブ
+        dot: true, // .で始まるファイルもマッチ
+        nonegate: true, // !による否定を無効化（セキュリティ上の理由）
+        nocomment: true, // #によるコメントを無効化（セキュリティ上の理由）
+        nocase: isWindows, // Windows環境ではケースインセンシティブ
       });
     });
   }

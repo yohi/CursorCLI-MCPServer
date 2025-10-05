@@ -9,7 +9,12 @@ import path from 'path';
 import { z } from 'zod';
 import chokidar from 'chokidar';
 import type { Result } from '../types/index.js';
-import { ServerConfigSchema, DEFAULT_CONFIG, type ServerConfig, type ValidationError } from './schema.js';
+import {
+  ServerConfigSchema,
+  DEFAULT_CONFIG,
+  type ServerConfig,
+  type ValidationError,
+} from './schema.js';
 
 /**
  * 設定マネージャーのオプション
@@ -189,7 +194,8 @@ export class ConfigurationManager {
 
     // MCP_ALLOW_DESTRUCTIVE_OPERATIONS
     if (process.env.MCP_ALLOW_DESTRUCTIVE_OPERATIONS) {
-      merged.security.allowDestructiveOperations = process.env.MCP_ALLOW_DESTRUCTIVE_OPERATIONS === 'true';
+      merged.security.allowDestructiveOperations =
+        process.env.MCP_ALLOW_DESTRUCTIVE_OPERATIONS === 'true';
     }
 
     return merged;
@@ -248,12 +254,12 @@ export class ConfigurationManager {
           this.config = newConfig;
 
           // すべてのコールバックを実行
-          this.changeCallbacks.forEach(cb => cb(newConfig));
+          this.changeCallbacks.forEach((cb) => cb(newConfig));
         } catch (error) {
           // エラーが発生した場合はデフォルト設定にフォールバック
           const fallbackConfig = { ...DEFAULT_CONFIG };
           this.config = fallbackConfig;
-          this.changeCallbacks.forEach(cb => cb(fallbackConfig));
+          this.changeCallbacks.forEach((cb) => cb(fallbackConfig));
         } finally {
           // Clear timeout reference
           this.reloadTimeout = null;

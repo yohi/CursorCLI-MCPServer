@@ -19,7 +19,11 @@ export const ServerConfigSchema = z.object({
   tools: z.object({
     allowedTools: z.array(z.string()).min(1),
     fileOperations: z.object({
-      maxFileSize: z.number().int().min(1024).max(100 * 1024 * 1024), // 1KB to 100MB
+      maxFileSize: z
+        .number()
+        .int()
+        .min(1024)
+        .max(100 * 1024 * 1024), // 1KB to 100MB
       allowedDirectories: z.array(z.string()),
       blockedPatterns: z.array(z.string()),
     }),
@@ -28,7 +32,11 @@ export const ServerConfigSchema = z.object({
     level: z.enum(['debug', 'info', 'warn', 'error']),
     outputs: z.array(z.enum(['console', 'file', 'cursor-output-panel'])).min(1),
     logFile: z.string().optional(),
-    maxLogSize: z.number().int().min(1024 * 1024).max(100 * 1024 * 1024), // 1MB to 100MB
+    maxLogSize: z
+      .number()
+      .int()
+      .min(1024 * 1024)
+      .max(100 * 1024 * 1024), // 1MB to 100MB
     rotationCount: z.number().int().min(1).max(30),
   }),
   security: z.object({

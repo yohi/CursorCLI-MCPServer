@@ -59,7 +59,7 @@ function zodToJsonSchema(schema: z.ZodType): any {
       } else if (value instanceof z.ZodEnum) {
         properties[key] = {
           type: 'string',
-          enum: value._def.values
+          enum: value._def.values,
         };
       } else if (value instanceof z.ZodOptional) {
         const innerType = value._def.innerType;
@@ -77,7 +77,7 @@ function zodToJsonSchema(schema: z.ZodType): any {
     return {
       type: 'object',
       properties,
-      ...(required.length > 0 ? { required } : {})
+      ...(required.length > 0 ? { required } : {}),
     };
   }
 
@@ -105,7 +105,7 @@ export class ToolRegistry {
       description: registration.description,
       schema: registration.schema,
       handler: registration.handler,
-      enabled: true
+      enabled: true,
     });
   }
 
@@ -182,7 +182,7 @@ export class ToolRegistry {
       definitions.push({
         name: tool.name,
         description: tool.description,
-        inputSchema
+        inputSchema,
       });
     }
 

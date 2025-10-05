@@ -18,7 +18,12 @@ export const ReadFileSchema = z.object({
   path: z.string().describe('読み取るファイルの相対パスまたは絶対パス'),
   encoding: z.enum(['utf-8', 'utf-16le', 'binary']).default('utf-8').optional(),
   offset: z.number().min(0).optional().describe('読み取り開始位置（バイト）'),
-  length: z.number().min(1).max(10_000_000).optional().describe('読み取りサイズ（バイト、最大10MB）')
+  length: z
+    .number()
+    .min(1)
+    .max(10_000_000)
+    .optional()
+    .describe('読み取りサイズ（バイト、最大10MB）'),
 });
 
 export type ReadFileParams = z.infer<typeof ReadFileSchema>;
@@ -42,7 +47,7 @@ export const WriteFileSchema = z.object({
   content: z.string().describe('書き込む内容'),
   encoding: z.enum(['utf-8', 'utf-16le']).optional().describe('エンコーディング'),
   createDirectories: z.boolean().optional().describe('親ディレクトリの自動作成'),
-  overwrite: z.boolean().optional().describe('既存ファイルの上書き許可')
+  overwrite: z.boolean().optional().describe('既存ファイルの上書き許可'),
 });
 
 export type WriteFileParams = z.infer<typeof WriteFileSchema>;
@@ -64,7 +69,7 @@ export const ListDirectorySchema = z.object({
   path: z.string().describe('一覧を取得するディレクトリパス'),
   recursive: z.boolean().default(false).optional().describe('サブディレクトリの再帰的取得'),
   includeHidden: z.boolean().default(false).optional().describe('隠しファイルの含有'),
-  pattern: z.string().optional().describe('ファイル名のglob パターン（例: *.ts）')
+  pattern: z.string().optional().describe('ファイル名のglob パターン（例: *.ts）'),
 });
 
 export type ListDirectoryParams = z.infer<typeof ListDirectorySchema>;
@@ -187,7 +192,7 @@ export class FileOperationsTool {
         size: buffer.length,
         encoding,
         truncated,
-        lastModified: stats.mtime.toISOString()
+        lastModified: stats.mtime.toISOString(),
       };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -264,7 +269,7 @@ export class FileOperationsTool {
         success: true,
         path: resolvedPath,
         size: stats.size,
-        created: !fileExists
+        created: !fileExists,
       };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -319,13 +324,13 @@ export class FileOperationsTool {
         recursive,
         includeHidden,
         pattern,
-        basePath: resolvedPath
+        basePath: resolvedPath,
       });
 
       return {
         entries,
         totalCount: entries.length,
-        path: resolvedPath
+        path: resolvedPath,
       };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -387,14 +392,18 @@ export class FileOperationsTool {
       const permissions = (stats.mode & 0o777).toString(8).padStart(3, '0');
 
       // エントリを追加（パターンマッチする場合、またはディレクトリで再帰モードの場合）
-      if (!options.pattern || minimatch(entryName, options.pattern) || (options.recursive && type === 'directory')) {
+      if (
+        !options.pattern ||
+        minimatch(entryName, options.pattern) ||
+        (options.recursive && type === 'directory')
+      ) {
         entries.push({
           name: entryName,
           path: entryPath,
           type,
           size: type === 'directory' ? 0 : stats.size,
           lastModified: stats.mtime.toISOString(),
-          permissions
+          permissions,
         });
       }
 

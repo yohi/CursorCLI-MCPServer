@@ -22,7 +22,7 @@ export const OpenFileSchema = z.object({
   path: z.string().describe('開くファイルのパス'),
   line: z.number().min(1).optional().describe('移動先の行番号'),
   column: z.number().min(1).optional().describe('移動先の列番号'),
-  preview: z.boolean().default(false).describe('プレビューモードで開く')
+  preview: z.boolean().default(false).describe('プレビューモードで開く'),
 });
 
 export type OpenFileParams = z.infer<typeof OpenFileSchema>;
@@ -58,10 +58,13 @@ export interface ActiveFileInfo {
  */
 export const InsertTextSchema = z.object({
   text: z.string().describe('挿入するテキスト'),
-  position: z.object({
-    line: z.number().min(1),
-    column: z.number().min(1)
-  }).optional().describe('挿入位置（省略時は現在のカーソル位置）')
+  position: z
+    .object({
+      line: z.number().min(1),
+      column: z.number().min(1),
+    })
+    .optional()
+    .describe('挿入位置（省略時は現在のカーソル位置）'),
 });
 
 export type InsertTextParams = z.infer<typeof InsertTextSchema>;
@@ -71,10 +74,12 @@ export type InsertTextParams = z.infer<typeof InsertTextSchema>;
  */
 export const ReplaceTextSchema = z.object({
   text: z.string().describe('置換後のテキスト'),
-  range: z.object({
-    start: z.object({ line: z.number().min(1), column: z.number().min(1) }),
-    end: z.object({ line: z.number().min(1), column: z.number().min(1) })
-  }).describe('置換範囲')
+  range: z
+    .object({
+      start: z.object({ line: z.number().min(1), column: z.number().min(1) }),
+      end: z.object({ line: z.number().min(1), column: z.number().min(1) }),
+    })
+    .describe('置換範囲'),
 });
 
 export type ReplaceTextParams = z.infer<typeof ReplaceTextSchema>;

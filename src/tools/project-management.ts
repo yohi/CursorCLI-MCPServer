@@ -38,7 +38,7 @@ export const SearchFilesSchema = z.object({
   includeIgnored: z.boolean().default(false).optional().describe('.gitignore対象の含有'),
   maxDepth: z.number().min(1).max(50).default(20).optional().describe('最大検索深度'),
   maxResults: z.number().min(1).max(1000).default(100).optional().describe('最大結果数'),
-  fileType: z.enum(['file', 'directory', 'all']).default('all').optional()
+  fileType: z.enum(['file', 'directory', 'all']).default('all').optional(),
 });
 
 export type SearchFilesParams = z.infer<typeof SearchFilesSchema>;
@@ -66,8 +66,14 @@ export interface SearchFilesResult {
  * get_workspace_structure ツールのスキーマ
  */
 export const GetWorkspaceStructureSchema = z.object({
-  maxDepth: z.number().min(1).max(10).default(5).optional().describe('ディレクトリツリーの最大深さ'),
-  excludePatterns: z.array(z.string()).default([]).optional().describe('除外パターン')
+  maxDepth: z
+    .number()
+    .min(1)
+    .max(10)
+    .default(5)
+    .optional()
+    .describe('ディレクトリツリーの最大深さ'),
+  excludePatterns: z.array(z.string()).default([]).optional().describe('除外パターン'),
 });
 
 export type GetWorkspaceStructureParams = z.infer<typeof GetWorkspaceStructureSchema>;
@@ -168,7 +174,7 @@ export class ProjectManagementTool {
       rootPath: this.projectRoot,
       settings,
       language,
-      framework
+      framework,
     };
   }
 
@@ -176,7 +182,13 @@ export class ProjectManagementTool {
    * ファイルを検索
    */
   async searchFiles(params: SearchFilesParams): Promise<SearchFilesResult> {
-    const { pattern, includeIgnored = false, maxDepth = 20, maxResults = 100, fileType = 'all' } = params;
+    const {
+      pattern,
+      includeIgnored = false,
+      maxDepth = 20,
+      maxResults = 100,
+      fileType = 'all',
+    } = params;
 
     // .gitignore を読み込み
     let ig: ReturnType<typeof ignore> | null = null;
@@ -233,7 +245,7 @@ export class ProjectManagementTool {
             path: fullPath,
             type: isFile ? 'file' : 'directory',
             size: isFile ? stats.size : undefined,
-            lastModified: stats.mtime.toISOString()
+            lastModified: stats.mtime.toISOString(),
           });
         }
 
@@ -254,7 +266,7 @@ export class ProjectManagementTool {
     return {
       files,
       totalCount,
-      truncated
+      truncated,
     };
   }
 
@@ -302,7 +314,7 @@ export class ProjectManagementTool {
           name,
           path: dirPath,
           type: 'file',
-          size: stats.size
+          size: stats.size,
         };
       }
 
@@ -327,7 +339,7 @@ export class ProjectManagementTool {
           name,
           path: dirPath,
           type: 'directory',
-          children
+          children,
         };
       }
 
@@ -343,7 +355,7 @@ export class ProjectManagementTool {
     return {
       root,
       totalFiles,
-      totalDirectories
+      totalDirectories,
     };
   }
 }
