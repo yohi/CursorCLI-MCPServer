@@ -232,8 +232,8 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - ツールレジストリへの登録処理
   - _Requirements: 10.3, 10.4, 10.5_
 
-- [ ] 9. エラーハンドリングシステムの実装
-- [ ] 9.1 エラークラスの定義と階層化
+- [x] 9. エラーハンドリングシステムの実装
+- [x] 9.1 エラークラスの定義と階層化
   - ValidationError、SecurityError、NotFoundErrorの型定義
   - InfrastructureError、TimeoutError、ResourceExhaustedErrorの型定義
   - BusinessRuleViolationErrorの型定義
@@ -241,7 +241,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - エラー階層の継承構造実装
   - _Requirements: 5.1, 5.2_
 
-- [ ] 9.2 エラーレスポンス生成とJSON-RPC変換
+- [x] 9.2 エラーレスポンス生成とJSON-RPC変換
   - エラーレスポンスのフォーマット定義
   - JSON-RPCエラーコードへの変換
   - スタックトレースの整形と出力
@@ -249,7 +249,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - エラーレスポンスのログ記録
   - _Requirements: 5.1_
 
-- [ ] 9.3 グローバルエラーハンドラーと例外処理
+- [x] 9.3 グローバルエラーハンドラーと例外処理
   - キャッチされなかった例外のハンドリング
   - プロセスクラッシュ防止機構
   - エラー発生時のグレースフルデグラデーション
