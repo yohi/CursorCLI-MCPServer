@@ -36,6 +36,7 @@ export interface ProjectInfo {
 export const SearchFilesSchema = z.object({
   pattern: z.string().describe('検索パターン（glob形式）'),
   includeIgnored: z.boolean().default(false).optional().describe('.gitignore対象の含有'),
+  maxDepth: z.number().min(1).max(50).default(20).optional().describe('最大検索深度'),
   maxResults: z.number().min(1).max(1000).default(100).optional().describe('最大結果数'),
   fileType: z.enum(['file', 'directory', 'all']).default('all').optional()
 });
@@ -175,7 +176,7 @@ export class ProjectManagementTool {
    * ファイルを検索
    */
   async searchFiles(params: SearchFilesParams): Promise<SearchFilesResult> {
-    const { pattern, includeIgnored = false, maxResults = 100, fileType = 'all' } = params;
+    const { pattern, includeIgnored = false, maxDepth = 20, maxResults = 100, fileType = 'all' } = params;
 
     // .gitignore を読み込み
     let ig: ReturnType<typeof ignore> | null = null;
@@ -191,7 +192,12 @@ export class ProjectManagementTool {
 
     // ファイルを再帰的に検索
     const allFiles: SearchResult[] = [];
-    const searchDir = async (dir: string): Promise<void> => {
+    const searchDir = async (dir: string, depth: number): Promise<void> => {
+      // 深さ制限チェック
+      if (depth > maxDepth) {
+        return;
+      }
+
       // セキュリティ検証
       const validateResult = this.securityValidator.validatePath(dir);
       if (!validateResult.ok) {
@@ -231,14 +237,14 @@ export class ProjectManagementTool {
           });
         }
 
-        // ディレクトリの場合、再帰的に検索
+        // ディレクトリの場合、再帰的に検索（深さを増やす）
         if (isDirectory) {
-          await searchDir(fullPath);
+          await searchDir(fullPath, depth + 1);
         }
       }
     };
 
-    await searchDir(this.projectRoot);
+    await searchDir(this.projectRoot, 0);
 
     // 最大結果数を適用
     const totalCount = allFiles.length;

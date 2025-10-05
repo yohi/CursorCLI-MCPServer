@@ -209,6 +209,44 @@ setup(
       // Assert
       expect(result.files.every(f => f.type === 'file')).toBe(true);
     });
+
+    it('最大深さを制限できる', async () => {
+      // Arrange
+      // 深い階層を作成
+      await fs.mkdir(path.join(projectRoot, 'level1', 'level2', 'level3'), { recursive: true });
+      await fs.writeFile(path.join(projectRoot, 'level1', 'level2', 'level3', 'deep.txt'), 'deep file');
+
+      const params: SearchFilesParams = {
+        pattern: '**/*.txt',
+        maxDepth: 2
+      };
+
+      // Act
+      const result = await tool.searchFiles(params);
+
+      // Assert
+      // 深さ2までしか検索されないので、level3/deep.txtは見つからない
+      expect(result.files.find(f => f.path.includes('deep.txt'))).toBeUndefined();
+    });
+
+    it('深い階層も検索できる（デフォルトmaxDepth=20）', async () => {
+      // Arrange
+      // 深い階層を作成
+      await fs.mkdir(path.join(projectRoot, 'level1', 'level2', 'level3'), { recursive: true });
+      await fs.writeFile(path.join(projectRoot, 'level1', 'level2', 'level3', 'deep.txt'), 'deep file');
+
+      const params: SearchFilesParams = {
+        pattern: '**/*.txt'
+        // maxDepth はデフォルト20
+      };
+
+      // Act
+      const result = await tool.searchFiles(params);
+
+      // Assert
+      // デフォルトの深さ20では level3/deep.txt が見つかる
+      expect(result.files.find(f => f.path.includes('deep.txt'))).toBeDefined();
+    });
   });
 
   describe('get_workspace_structure', () => {
@@ -314,6 +352,7 @@ setup(
       const validParams = {
         pattern: '**/*.ts',
         includeIgnored: false,
+        maxDepth: 20,
         maxResults: 100,
         fileType: 'file' as const
       };
@@ -326,6 +365,16 @@ setup(
       const invalidParams = {
         pattern: '**/*.ts',
         maxResults: 2000 // 最大1000を超える
+      };
+
+      const result = SearchFilesSchema.safeParse(invalidParams);
+      expect(result.success).toBe(false);
+    });
+
+    it('SearchFilesSchema は不正な深さを拒否する', () => {
+      const invalidParams = {
+        pattern: '**/*.ts',
+        maxDepth: 100 // 最大50を超える
       };
 
       const result = SearchFilesSchema.safeParse(invalidParams);
