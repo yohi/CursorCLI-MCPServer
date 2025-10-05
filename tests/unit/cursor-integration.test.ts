@@ -126,6 +126,60 @@ describe('CursorIntegrationManager', () => {
       // Cleanup
       delete process.env.TEST_API_KEY;
     });
+
+    it('未定義の環境変数がある場合、非strictモードでは警告を出力して空文字列を返す', async () => {
+      // Arrange: 未定義の環境変数を参照する設定
+      const cursorSettings = {
+        mcpServers: {
+          'cursorcli-mcp-server': {
+            command: 'node',
+            args: ['/path/to/server.js'],
+            env: {
+              MISSING_VAR: '${UNDEFINED_ENV_VAR}',
+            },
+          },
+        },
+      };
+      await fs.writeFile(
+        path.join(tempDir, 'cursor-settings.json'),
+        JSON.stringify(cursorSettings, null, 2)
+      );
+
+      // Act: 環境変数を解決（非strictモード）
+      const resolvedEnv = await manager.resolveEnvironmentVariables('cursorcli-mcp-server');
+
+      // Assert: 空文字列が返される（エラーはthrowされない）
+      expect(resolvedEnv.MISSING_VAR).toBe('');
+    });
+
+    it('strictモードで未定義の環境変数がある場合、エラーをthrowする', async () => {
+      // Arrange: strictモードのマネージャーを作成
+      const strictManager = new CursorIntegrationManager({
+        cursorConfigPath: path.join(tempDir, 'cursor-settings.json'),
+        strictEnvMode: true,
+      });
+
+      const cursorSettings = {
+        mcpServers: {
+          'cursorcli-mcp-server': {
+            command: 'node',
+            args: ['/path/to/server.js'],
+            env: {
+              MISSING_VAR: '${UNDEFINED_STRICT_ENV_VAR}',
+            },
+          },
+        },
+      };
+      await fs.writeFile(
+        path.join(tempDir, 'cursor-settings.json'),
+        JSON.stringify(cursorSettings, null, 2)
+      );
+
+      // Act & Assert: エラーがthrowされる
+      await expect(
+        strictManager.resolveEnvironmentVariables('cursorcli-mcp-server')
+      ).rejects.toThrow('Environment variable "UNDEFINED_STRICT_ENV_VAR"');
+    });
   });
 
   describe('サーバー有効/無効切り替え', () => {

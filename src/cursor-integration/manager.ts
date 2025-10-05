@@ -10,12 +10,14 @@ import path from 'path';
 import os from 'os';
 import chokidar from 'chokidar';
 import { CursorSettingsSchema, type CursorSettings, DEFAULT_CURSOR_SETTINGS } from './schema.js';
+import { getLogger } from '../logging/index.js';
 
 /**
  * Cursor統合マネージャーのオプション
  */
 export interface CursorIntegrationOptions {
   cursorConfigPath?: string;
+  strictEnvMode?: boolean;
 }
 
 /**
@@ -32,6 +34,8 @@ export class CursorIntegrationManager {
   private watcher: chokidar.FSWatcher | null = null;
   private changeCallbacks: CursorConfigChangeCallback[] = [];
   private reloadTimeout: NodeJS.Timeout | null = null;
+  private strictEnvMode: boolean;
+  private logger = getLogger();
 
   constructor(options: CursorIntegrationOptions = {}) {
     // Cursor設定ファイルのパスを決定
@@ -42,6 +46,9 @@ export class CursorIntegrationManager {
       const resolvedHome = os.homedir() || process.cwd();
       this.cursorConfigPath = path.join(resolvedHome, '.cursor', 'settings.json');
     }
+
+    // strictEnvModeの設定（デフォルトはfalse）
+    this.strictEnvMode = options.strictEnvMode ?? false;
   }
 
   /**
@@ -85,6 +92,14 @@ export class CursorIntegrationManager {
    * 環境変数を解決
    *
    * ${VAR_NAME} 形式の参照を実際の環境変数の値に置き換えます。
+   *
+   * 動作モード:
+   * - strictEnvMode = false (デフォルト): 環境変数が未定義の場合、警告を出力して空文字列を返す
+   * - strictEnvMode = true: 環境変数が未定義の場合、エラーをthrowする
+   *
+   * @param serverName - サーバー名
+   * @returns 解決された環境変数のマップ
+   * @throws strictEnvMode=trueかつ参照された環境変数が未定義の場合、Errorをthrow
    */
   async resolveEnvironmentVariables(serverName: string): Promise<Record<string, string>> {
     if (!this.cursorSettings) {
@@ -103,7 +118,32 @@ export class CursorIntegrationManager {
       const envVarMatch = value.match(/^\$\{([^}]+)\}$/);
       if (envVarMatch) {
         const envVarName = envVarMatch[1];
-        resolvedEnv[key] = process.env[envVarName] || '';
+        const envValue = process.env[envVarName];
+
+        if (envValue === undefined) {
+          // 環境変数が未定義の場合
+          const errorMessage = `Environment variable "${envVarName}" referenced in server "${serverName}" key "${key}" is not defined`;
+
+          if (this.strictEnvMode) {
+            // strictモード: エラーをthrow
+            this.logger.error(errorMessage, undefined, {
+              serverName,
+              key,
+              missingVar: envVarName,
+            });
+            throw new Error(errorMessage);
+          } else {
+            // 非strictモード: 警告を出力して空文字列を返す
+            this.logger.warn(errorMessage, undefined, {
+              serverName,
+              key,
+              missingVar: envVarName,
+            });
+            resolvedEnv[key] = '';
+          }
+        } else {
+          resolvedEnv[key] = envValue;
+        }
       } else {
         resolvedEnv[key] = value;
       }
