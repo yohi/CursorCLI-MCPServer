@@ -21,14 +21,17 @@ import {
 describe('ErrorHandler', () => {
   let errorHandler: ErrorHandler;
   let logSpy: jest.SpyInstance;
+  let originalNodeEnv: string | undefined;
 
   beforeEach(() => {
+    originalNodeEnv = process.env.NODE_ENV;
     errorHandler = new ErrorHandler();
     // ログ出力をモック
     logSpy = jest.spyOn(console, 'error').mockImplementation();
   });
 
   afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
     logSpy.mockRestore();
   });
 
@@ -153,7 +156,8 @@ describe('ErrorHandler', () => {
       });
     });
 
-    it('スタックトレースを含むこと', () => {
+    it('開発環境ではスタックトレースを含むこと', () => {
+      process.env.NODE_ENV = 'development';
       const error = new ValidationError('テストエラー');
 
       const response = errorHandler.handleError(error, '105');
@@ -161,6 +165,24 @@ describe('ErrorHandler', () => {
       expect(response.error.data?.stack).toBeDefined();
       expect(typeof response.error.data?.stack).toBe('string');
       expect(response.error.data?.stack).toContain('ValidationError');
+    });
+
+    it('本番環境ではスタックトレースを含まないこと', () => {
+      process.env.NODE_ENV = 'production';
+      const error = new ValidationError('テストエラー');
+
+      const response = errorHandler.handleError(error, '106');
+
+      expect(response.error.data?.stack).toBeUndefined();
+    });
+
+    it('本番環境では一般的なErrorのスタックトレースも含まないこと', () => {
+      process.env.NODE_ENV = 'production';
+      const error = new Error('一般的なエラー');
+
+      const response = errorHandler.handleError(error, '107');
+
+      expect(response.error.data?.stack).toBeUndefined();
     });
 
     it('エラーコンテキストを含むこと', () => {
@@ -171,7 +193,7 @@ describe('ErrorHandler', () => {
         context
       );
 
-      const response = errorHandler.handleError(error, '106');
+      const response = errorHandler.handleError(error, '108');
 
       expect(response.error.data?.context).toEqual(context);
     });
@@ -179,11 +201,11 @@ describe('ErrorHandler', () => {
     it('エラーをログに記録すること', () => {
       const error = new ValidationError('ログ記録テスト');
 
-      errorHandler.handleError(error, '107');
+      errorHandler.handleError(error, '109');
 
       expect(logSpy).toHaveBeenCalled();
       const loggedMessage = logSpy.mock.calls[0][0];
-      expect(loggedMessage).toContain('Error handling request 107');
+      expect(loggedMessage).toContain('Error handling request 109');
       expect(loggedMessage).toContain('ログ記録テスト');
     });
   });

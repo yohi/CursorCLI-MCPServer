@@ -16,8 +16,12 @@ export class GlobalErrorHandler {
 
   /**
    * グローバルエラーハンドラーをセットアップ
+   * 複数回呼び出しても安全（冪等性）
    */
   public setup(): void {
+    // 既存のリスナーをクリーンアップ
+    this.cleanup();
+
     // 未捕捉の例外をハンドリング
     this.uncaughtExceptionHandler = (error: Error) => {
       this.handleUncaughtException(error);

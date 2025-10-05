@@ -44,6 +44,34 @@ describe('GlobalErrorHandler', () => {
       const listenersAfter = process.listenerCount('unhandledRejection');
       expect(listenersAfter).toBeGreaterThan(listenersBefore);
     });
+
+    it('複数回呼び出してもリスナーが増えないこと（冪等性）', () => {
+      globalErrorHandler.setup();
+      const listenersAfterFirst = process.listenerCount('uncaughtException');
+
+      globalErrorHandler.setup();
+      const listenersAfterSecond = process.listenerCount('uncaughtException');
+
+      globalErrorHandler.setup();
+      const listenersAfterThird = process.listenerCount('uncaughtException');
+
+      expect(listenersAfterSecond).toBe(listenersAfterFirst);
+      expect(listenersAfterThird).toBe(listenersAfterFirst);
+    });
+
+    it('複数回呼び出してもPromise拒否リスナーが増えないこと', () => {
+      globalErrorHandler.setup();
+      const listenersAfterFirst = process.listenerCount('unhandledRejection');
+
+      globalErrorHandler.setup();
+      const listenersAfterSecond = process.listenerCount('unhandledRejection');
+
+      globalErrorHandler.setup();
+      const listenersAfterThird = process.listenerCount('unhandledRejection');
+
+      expect(listenersAfterSecond).toBe(listenersAfterFirst);
+      expect(listenersAfterThird).toBe(listenersAfterFirst);
+    });
   });
 
   describe('handleUncaughtException', () => {

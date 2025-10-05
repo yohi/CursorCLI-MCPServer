@@ -46,8 +46,21 @@ export interface ErrorResponse {
 
 /**
  * エラーハンドラークラス
+ *
+ * セキュリティ考慮事項:
+ * - 本番環境(NODE_ENV=production)ではスタックトレースを含めない
+ * - 内部実装の詳細漏洩を防ぐため、エラー情報を制限する
  */
 export class ErrorHandler {
+  /**
+   * 本番環境かどうかを判定
+   *
+   * @returns NODE_ENV が 'production' の場合は true
+   */
+  private isProduction(): boolean {
+    return process.env.NODE_ENV === 'production';
+  }
+
   /**
    * エラーをJSON-RPCエラーレスポンスに変換
    */
@@ -95,16 +108,22 @@ export class ErrorHandler {
     error: Error,
     requestId: string | number | null
   ): ErrorResponse {
+    const data: ErrorResponse['error']['data'] = {
+      errorCode: 'UNKNOWN_ERROR',
+    };
+
+    // 本番環境以外ではスタックトレースを含める
+    if (!this.isProduction()) {
+      data.stack = this.formatStackTrace(error);
+    }
+
     return {
       jsonrpc: '2.0',
       id: requestId,
       error: {
         code: JSONRPCErrorCode.INTERNAL_ERROR,
         message: error.message,
-        data: {
-          errorCode: 'UNKNOWN_ERROR',
-          stack: this.formatStackTrace(error),
-        },
+        data,
       },
     };
   }
@@ -139,8 +158,12 @@ export class ErrorHandler {
   private buildErrorData(error: MCPError): ErrorResponse['error']['data'] {
     const data: ErrorResponse['error']['data'] = {
       errorCode: error.code,
-      stack: this.formatStackTrace(error),
     };
+
+    // 本番環境以外ではスタックトレースを含める
+    if (!this.isProduction()) {
+      data.stack = this.formatStackTrace(error);
+    }
 
     // コンテキスト情報を追加
     if (error.context) {
