@@ -19,6 +19,14 @@ import {
   SearchFilesSchema,
   GetWorkspaceStructureSchema
 } from './project-management.js';
+import {
+  EditorControlTool,
+  CursorEditorAPI,
+  OpenFileSchema,
+  GetActiveFileSchema,
+  InsertTextSchema,
+  ReplaceTextSchema
+} from './editor-control.js';
 
 /**
  * ファイル操作ツールをツールレジストリに登録する
@@ -232,8 +240,145 @@ export function registerProjectManagementTools(
   });
 }
 
+/**
+ * エディタ制御ツールをツールレジストリに登録する
+ *
+ * Requirement 7.4: ツールレジストリへの登録処理
+ */
+export function registerEditorControlTools(
+  registry: ToolRegistry,
+  editorAPI: CursorEditorAPI
+): void {
+  const editorControl = new EditorControlTool(editorAPI);
+
+  // open_file_in_editor ツールを登録
+  registry.register({
+    name: 'open_file_in_editor',
+    description: 'Cursor IDEでファイルを開きます。行番号や列番号を指定してカーソル位置を移動できます。',
+    schema: OpenFileSchema,
+    handler: async (params) => {
+      try {
+        const result = await editorControl.openFileInEditor(params);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2)
+            }
+          ]
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${errorMessage}`
+            }
+          ],
+          isError: true
+        };
+      }
+    }
+  });
+
+  // get_active_file ツールを登録
+  registry.register({
+    name: 'get_active_file',
+    description: '現在Cursor IDEでアクティブになっているファイルの情報（パス、カーソル位置、選択範囲）を取得します。',
+    schema: GetActiveFileSchema,
+    handler: async () => {
+      try {
+        const result = await editorControl.getActiveFile();
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2)
+            }
+          ]
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${errorMessage}`
+            }
+          ],
+          isError: true
+        };
+      }
+    }
+  });
+
+  // insert_text ツールを登録
+  registry.register({
+    name: 'insert_text',
+    description: '指定された位置にテキストを挿入します。位置を省略した場合は現在のカーソル位置に挿入します。',
+    schema: InsertTextSchema,
+    handler: async (params) => {
+      try {
+        const result = await editorControl.insertText(params);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2)
+            }
+          ]
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${errorMessage}`
+            }
+          ],
+          isError: true
+        };
+      }
+    }
+  });
+
+  // replace_text ツールを登録
+  registry.register({
+    name: 'replace_text',
+    description: '指定された範囲のテキストを置換します。複数行にまたがる範囲も指定できます。',
+    schema: ReplaceTextSchema,
+    handler: async (params) => {
+      try {
+        const result = await editorControl.replaceText(params);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2)
+            }
+          ]
+        };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${errorMessage}`
+            }
+          ],
+          isError: true
+        };
+      }
+    }
+  });
+}
+
 export { FileOperationsTool } from './file-operations.js';
 export { ProjectManagementTool } from './project-management.js';
+export { EditorControlTool } from './editor-control.js';
 
 export type {
   ReadFileParams,
@@ -255,3 +400,15 @@ export type {
   DirectoryNode,
   FileNode
 } from './project-management.js';
+
+export type {
+  OpenFileParams,
+  OpenFileResult,
+  GetActiveFileParams,
+  ActiveFileInfo,
+  InsertTextParams,
+  ReplaceTextParams,
+  EditResult,
+  Position,
+  CursorEditorAPI
+} from './editor-control.js';

@@ -163,17 +163,17 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - ツールレジストリへの登録処理
   - _Requirements: 3.4_
 
-- [ ] 7. エディタ制御ツールの実装
-- [ ] 7.1 ファイルオープン機能（open_file_in_editor）
+- [x] 7. エディタ制御ツールの実装
+- [x] 7.1 ファイルオープン機能（open_file_in_editor）
   - open_file_in_editorツールのスキーマ定義
-  - Cursor IDEとの通信確立
+  - Cursor IDEとの通信確立（CursorEditorAPI インターフェース）
   - ファイルオープン要求の送信
   - 行番号と列番号への移動機能
   - プレビューモード対応
   - IDE未起動時のエラー処理
   - _Requirements: 4.1, 4.5_
 
-- [ ] 7.2 アクティブファイル情報取得（get_active_file）
+- [x] 7.2 アクティブファイル情報取得（get_active_file）
   - get_active_fileツールのスキーマ定義
   - 現在アクティブなファイルパスの取得
   - カーソル位置情報の取得
@@ -181,7 +181,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - 未保存変更の検出
   - _Requirements: 4.2_
 
-- [ ] 7.3 テキスト編集機能（insert_text, replace_text）
+- [x] 7.3 テキスト編集機能（insert_text, replace_text）
   - insert_textとreplace_textツールのスキーマ定義
   - テキスト挿入位置の計算と検証
   - テキスト置換範囲の検証
@@ -190,12 +190,12 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - 編集結果の確認とレスポンス生成
   - _Requirements: 4.3, 4.4_
 
-- [ ] 7.4 エディタ制御の統合と同期処理
-  - エディタ操作の順序制御（シーケンシャル実行）
-  - 操作完了待機機能
-  - CursorCLI Editor APIとの統合
-  - エディタ状態変更の追跡
-  - ツールレジストリへの登録処理
+- [x] 7.4 エディタ制御の統合と同期処理
+  - エディタ操作の順序制御（CursorEditorAPI経由）
+  - 操作完了待機機能（async/await）
+  - CursorCLI Editor APIインターフェースの定義
+  - エディタ状態変更の追跡（ActiveFileInfo）
+  - ツールレジストリへの登録処理（registerEditorControlTools）
   - _Requirements: 4.6_
 
 - [ ] 8. モデル情報管理ツールの実装
