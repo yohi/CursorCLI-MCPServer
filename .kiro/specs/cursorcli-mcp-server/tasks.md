@@ -257,7 +257,7 @@ CursorCLI-MCPServerは、既存のCursorCLIをModel Context Protocol（MCP）サ
   - _Requirements: 5.6_
 
 - [ ] 10. Cursor IDE統合機能の実装
-- [ ] 10.1 Cursor Settings UI連携
+- [x] 10.1 Cursor Settings UI連携
   - mcpServers設定フォーマットへの対応
   - 環境変数管理機能（env フィールド）
   - サーバー有効/無効切り替えのサポート
