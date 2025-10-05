@@ -22,7 +22,7 @@ export const OpenFileSchema = z.object({
   path: z.string().describe('開くファイルのパス'),
   line: z.number().min(1).optional().describe('移動先の行番号'),
   column: z.number().min(1).optional().describe('移動先の列番号'),
-  preview: z.boolean().default(false).optional().describe('プレビューモードで開く')
+  preview: z.boolean().default(false).describe('プレビューモードで開く')
 });
 
 export type OpenFileParams = z.infer<typeof OpenFileSchema>;

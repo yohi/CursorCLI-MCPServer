@@ -91,7 +91,8 @@ describe('EditorControlTool - open_file_in_editor', () => {
   describe('基本的なファイルオープン', () => {
     it('ファイルパスを指定してファイルを開ける（Requirement 4.1）', async () => {
       const result = await editorTool.openFileInEditor({
-        path: '/test/project/src/index.ts'
+        path: '/test/project/src/index.ts',
+        preview: false
       });
 
       expect(result.success).toBe(true);
@@ -102,7 +103,8 @@ describe('EditorControlTool - open_file_in_editor', () => {
       const result = await editorTool.openFileInEditor({
         path: '/test/project/src/app.ts',
         line: 10,
-        column: 5
+        column: 5,
+        preview: false
       });
 
       expect(result.success).toBe(true);
@@ -125,7 +127,8 @@ describe('EditorControlTool - open_file_in_editor', () => {
 
       await expect(
         editorTool.openFileInEditor({
-          path: '/test/project/src/index.ts'
+          path: '/test/project/src/index.ts',
+          preview: false
         })
       ).rejects.toThrow('Cursor IDE is not running');
     });
@@ -134,7 +137,8 @@ describe('EditorControlTool - open_file_in_editor', () => {
       await expect(
         editorTool.openFileInEditor({
           path: '/test/project/src/index.ts',
-          line: 0 // 最小値は1
+          line: 0, // 最小値は1
+          preview: false
         })
       ).rejects.toThrow();
     });
